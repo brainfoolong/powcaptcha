@@ -1,0 +1,16 @@
+services:
+  bun:
+    image: docker.io/oven/bun:latest
+    restart: on-failure
+    volumes:
+      - ../:/powcaptcha
+  nodejs:
+    image: docker.io/node:latest
+    restart: on-failure
+    volumes:
+      - ../:/powcaptcha
+  php:
+    image: docker.io/php:8.0-cli
+    restart: on-failure
+    volumes:
+      - ../:/powcaptcha

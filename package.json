@@ -1,0 +1,21 @@
+{
+  "name": "powcaptcha",
+  "description": "Proof of Work Captcha/Challenge/Brute Force protection for your browser and server, without any required user interaction.",
+  "version": "0.1.0",
+  "scripts": {
+    "dist": "node ./node_modules/typescript/bin/tsc --project tsconfig.json && node build/dist.js"
+  },
+  "dependencies": {
+    "typescript": "^5.8.3"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/brainfoolong/powcaptcha.git"
+  },
+  "author": "BrainFooLong (Roland Eigelsreiter)",
+  "license": "MIT",
+  "bugs": {
+    "url": "https://github.com/brainfoolong/powcaptcha/issues"
+  },
+  "homepage": "https://github.com/brainfoolong/powcaptcha"
+}
