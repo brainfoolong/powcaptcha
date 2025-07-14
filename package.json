@@ -3,7 +3,8 @@
   "description": "Proof of Work Captcha/Challenge/Brute Force protection for your browser and server, without any required user interaction.",
   "version": "0.1.0",
   "scripts": {
-    "dist": "node ./node_modules/typescript/bin/tsc --project tsconfig.json && node build/dist.js"
+    "minify" : "jsmin -o js/powcaptcha-server-module.min.js js/powcaptcha-server-module.js && jsmin -o js/powcaptcha-server.min.js js/powcaptcha-server.js && jsmin -o js/powcaptcha-browser.min.js js/powcaptcha-browser.js",
+    "dist": "node ./node_modules/typescript/bin/tsc --project tsconfig.json && node build/dist.js && npm run minify"
   },
   "dependencies": {
     "typescript": "^5.8.3"
@@ -17,5 +18,8 @@
   "bugs": {
     "url": "https://github.com/brainfoolong/powcaptcha/issues"
   },
-  "homepage": "https://github.com/brainfoolong/powcaptcha"
+  "homepage": "https://github.com/brainfoolong/powcaptcha",
+  "devDependencies": {
+    "jsmin": "^1.0.1"
+  }
 }

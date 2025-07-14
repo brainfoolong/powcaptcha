@@ -18,7 +18,7 @@ protection). But we still use the word captcha as almost everyone is used to it.
 - Multiple programming languages supported (As of now PHP, TS and JS)
 - Invisible by default, but you can implement your own progress bar or solving strategy
 - Fast Server-Side verification and variable challenge difficulty for the client
-- Super slim browser library
+- Super slim browser library (1,7kb unzipped/raw)
 - No external dependencies, not in the browser, not on the server
 - No tracking, no ads, just open-source
 - Self hosted

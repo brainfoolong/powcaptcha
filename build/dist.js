@@ -3,7 +3,7 @@ const fs = require('fs')
 
 const packageJson = require('../package.json')
 const serverFile = __dirname + '/../js/powcaptcha-server.js'
-const serverFileModule = __dirname + '/../js/powcaptcha-server.module.js'
+const serverFileModule = __dirname + '/../js/powcaptcha-server-module.js'
 const browserFile = __dirname + '/../js/powcaptcha-browser.js'
 let contents = fs.readFileSync(serverFile).toString().replace('export default class Powcaptcha', 'class Powcaptcha')
 contents = '// Powcaptcha v' + packageJson.version + ' @ ' + packageJson.homepage + '\n' + contents
