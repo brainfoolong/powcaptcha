@@ -145,12 +145,12 @@ numbers to see how it generally performs.
 | PHP 8.4 i9-14900                  | ~260ms     | ~2ms        |
 | Bun i9-14900                      | ~40ms      | ~2ms        |
 | Node i9-14900                     | ~70ms      | ~2ms        |
-| Golang i9-14900                   | ~30ms      | ~5ms        |
-| Google Chrome i9-14900            | ~280ms     | <3ms *      |
-| Samsung Galaxy A52s Google Chrome | ~800ms     | <3ms *      |
-| Samsung S22 Google Chrome         | ~720ms     | <3ms *      |
-| Samsung S22 Samsung Browser       | ~1100ms    | <3ms *      |
-| Pixel 6 Google Chrome             | ~650ms     | <3ms *      |
-| Pixel 9 Google Chrome             | ~600ms     | <3ms *      |
-| iPhone XR Safari                  | ~450ms     | <3ms *      |
-| iPhone 15 Safari                  | ~220ms     | <3ms *      |
+| Golang i9-14900                   | ~30ms      | ~2ms        |
+| Google Chrome i9-14900            | ~280ms     | ~2ms *      |
+| Samsung Galaxy A52s Google Chrome | ~800ms     | ~2ms *      |
+| Samsung S22 Google Chrome         | ~720ms     | ~2ms *      |
+| Samsung S22 Samsung Browser       | ~1100ms    | ~2ms *      |
+| Pixel 6 Google Chrome             | ~680ms     | ~2ms *      |
+| Pixel 9 Google Chrome             | ~680ms     | ~2ms *      |
+| iPhone XR Safari                  | ~450ms     | ~2ms *      |
+| iPhone 15 Safari                  | ~220ms     | ~2ms *      |
