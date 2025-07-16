@@ -19,7 +19,7 @@ $now = microtime(true);
 foreach ($types as $type) {
     $challengeFile = __DIR__ . "/../tmp/cross-challenge/$type";
     $challenge = file_get_contents($challengeFile);
-    $hashFile = __DIR__ . "/../tmp/" . hash('sha256', $challenge) . ".pow";
+    $hashFile = __DIR__ . "/../tmp/" . Powcaptcha::hash($challenge) . ".pow";
     if (file_exists($hashFile)) {
         unlink($hashFile);
     }

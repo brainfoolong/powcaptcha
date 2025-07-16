@@ -1,4 +1,4 @@
-import Powcaptcha from '../ts/powcaptcha-server'
+import Powcaptcha from '../ts/powcaptcha'
 
 (async () => {
   // @ts-ignore

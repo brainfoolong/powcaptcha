@@ -5,12 +5,17 @@ services:
     volumes:
       - ../:/powcaptcha
   nodejs:
-    image: docker.io/node:latest
+    image: docker.io/node:16
     restart: on-failure
     volumes:
       - ../:/powcaptcha
   php:
     image: docker.io/php:8.0-cli
+    restart: on-failure
+    volumes:
+      - ../:/powcaptcha
+  golang:
+    image: docker.io/golang:latest
     restart: on-failure
     volumes:
       - ../:/powcaptcha

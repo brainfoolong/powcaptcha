@@ -1,6 +1,10 @@
 // Powcaptcha v0.1.0 @ https://github.com/brainfoolong/powcaptcha
-class Powcaptcha {
+export default class Powcaptcha {
     static tmpHelpers = {};
+    // browser-strip-start
+    // @ts-ignore
+    static tmpFolder = process?.env?.POWCAPTCHA_TMPFOLDER;
+    // browser-strip-end
     /**
      * Create a challenge to solve
      * @param {number} puzzles How many puzzles should be included, default = 50 and generates a string with 1600 chars (1.6kB)
@@ -36,6 +40,17 @@ class Powcaptcha {
             throw new Error('Invalid solution');
         }
         Powcaptcha.init();
+        // browser-strip-start
+        // @ts-ignore
+        const fs = require('fs');
+        // check if challenge already has been tested
+        // do this before calculating solution will save server performance
+        const challengeHash = Powcaptcha.hash(challengeString);
+        const hashFile = Powcaptcha.tmpFolder + '/' + challengeHash + '.pow';
+        if (fs.existsSync(hashFile)) {
+            return false;
+        }
+        // browser-strip-end
         const threshold = Math.pow(10, 10 - difficulty);
         for (let i = 0; i < challenges; i++) {
             const iteration = solution.substring(i * lengthPerSolution, i * lengthPerSolution + lengthPerSolution);
@@ -45,6 +60,20 @@ class Powcaptcha {
             }
             return false;
         }
+        // browser-strip-start
+        if (!Powcaptcha.tmpFolder || !fs.existsSync(Powcaptcha.tmpFolder) || !fs.lstatSync(Powcaptcha.tmpFolder).isDirectory()) {
+            throw new Error('Cannot find tmpFolder for Powcaptcha');
+        }
+        // delete files older than 5 minutes
+        const timeThreshold = new Date().getTime() - (300 * 1000);
+        for (const file of fs.readdirSync(Powcaptcha.tmpFolder)) {
+            const path = Powcaptcha.tmpFolder + '/' + file;
+            if (file.endsWith('.pow') && fs.lstatSync(path).mtime.getTime() < timeThreshold) {
+                fs.unlinkSync(path);
+            }
+        }
+        fs.writeFileSync(hashFile, '');
+        // browser-strip-end
         return true;
     }
     /**
@@ -209,6 +238,15 @@ class Powcaptcha {
                 };
             }
         }
+        // browser-strip-start
+        if (typeof window === 'undefined') {
+            // using node:crypto and not webcrypto as webcrypto performance is 10x worse for sha256
+            const { randomBytes } = require('node:crypto');
+            Powcaptcha.tmpHelpers.randomBytes = (size) => {
+                return Uint8Array.from(randomBytes(size));
+            };
+        }
+        // browser-strip-end
     }
     /**
      * Convert given byte array to visual hex representation with leading 0x

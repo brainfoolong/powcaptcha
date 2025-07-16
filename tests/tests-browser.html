@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>POWCAPTCHA Browser Tests</title>
+    <script src="../js/powcaptcha-browser.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+</head>
+<body>
+<div id="console" style="white-space: pre"></div>
+<progress style="width:min(300px, 100vw)" value="1" max="100"></progress>
+<script>
+  (async () => {
+    function getTime(){
+      if(typeof performance !== 'undefined'){
+        return performance.now()
+      }
+      return new Date().getTime()
+    }
+
+    function logTime (msg) {
+      const t = getTime()
+      const diff = t - now
+      now = t
+      document.getElementById('console').append(msg + ' (Took ' + diff.toFixed(2) + 'ms)\n')
+    }
+
+    const progressBar = document.querySelector('progress')
+
+    let now = getTime()
+
+    const puzzles = 50
+    const difficulty = 4
+
+    const challenge = Powcaptcha.createChallenge(puzzles)
+    logTime('Challenge created')
+    let count = 0
+    const solution = await Powcaptcha.solveChallenge(challenge, difficulty, (progress) => {
+      count++
+      progressBar.value = progress * 100
+    })
+    if (count !== puzzles) {
+      throw new Error('Cannot solve challenges with progress callback')
+    }
+    logTime('Challenge solved')
+    let verification = Powcaptcha.verifySolution(challenge, solution, difficulty)
+    if (!verification) {
+      throw new Error('Cannot verify solution')
+    }
+    logTime('Solution verified')
+  })()
+</script>
+</body>
+</html>

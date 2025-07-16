@@ -13,6 +13,6 @@
     ]
   },
   "include": [
-    "ts/powcaptcha-server.ts"
+    "ts/powcaptcha.ts"
   ]
 }

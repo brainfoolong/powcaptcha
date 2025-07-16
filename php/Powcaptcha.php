@@ -8,6 +8,7 @@ class Powcaptcha
 {
 
     public static string $tmpFolder = '';
+    private static array $byteMap = [];
 
     /**
      * Create a challenge to solve
@@ -54,13 +55,11 @@ class Powcaptcha
             return false;
         }
 
-        $threshold = pow(10, 10 - $difficulty);
+        $threshold = 10 ** (10 - $difficulty);
         for ($i = 0; $i < $challenges; $i++) {
             $iteration = substr($solution, $i * $lengthPerSolution, $lengthPerSolution);
             $challenge = substr($challengeString, $i * 32, 32);
-            $hash = self::hash($challenge . $iteration);
-            $value = unpack('N', hex2bin(substr($hash, 0, 8)))[1];
-            if ($value <= $threshold) {
+            if (self::hashInt($challenge . $iteration) <= $threshold) {
                 continue;
             }
             return false;
@@ -104,16 +103,16 @@ class Powcaptcha
         }
         $challenges = strlen($challengeString) / 32;
         $solutions = [];
-        $threshold = pow(10, 10 - $difficulty);
+        $threshold = 10 ** (10 - $difficulty);
+        $maxIterations = 10 ** ($difficulty + 2);
+        $c = 0;
         for ($i = 0; $i < $challenges; $i++) {
-            $iteration = pow(10, $difficulty + 1);
+            $iteration = 10 ** ($difficulty + 1);
             $challenge = substr($challengeString, $i * 32, 32);
-            while (true) {
-                $hash = self::hash($challenge . $iteration);
-                $value = unpack('N', substr(hex2bin(substr($hash, 0, 8)), 0, 4))[1];
-                if ($value <= $threshold) {
+            while ($iteration <= $maxIterations) {
+                if (self::hashInt($challenge . $iteration) <= $threshold) {
                     $solutions[] = $iteration;
-                    break;
+                    continue 2;
                 }
                 $iteration++;
             }
@@ -122,13 +121,98 @@ class Powcaptcha
     }
 
     /**
-     * Generate a sha-256 hash
+     * Generate a compute intensive but non cryptographic purpose fixed length hash
      * @param string $data
-     * @return string
+     * @return string|int
      */
-    private static function hash(string $data): string
+    public static function hash(string $data): string|int
     {
-        return hash('sha256', $data);
+        if (!self::$byteMap) {
+            self::fillByteMap();
+        }
+        $h1 = 0x811c9dc5;
+        $h2 = 0x8b8d2a97;
+        $h3 = 0xc9dc5118;
+        $h4 = 0x7b9d8b8d;
+        $prime = 0x01000193;
+
+        $len = strlen($data);
+        for ($i = 0; $i < $len; $i++) {
+            $b = self::$byteMap[$data[$i]];
+
+            $h1 = ($h1 ^ $b);
+            $h1 = ($h1 * $prime) & 0xFFFFFFFF;
+
+            $h2 = ($h2 ^ (($b << 1) & 0xFF));
+            $h2 = ($h2 * $prime) & 0xFFFFFFFF;
+
+            $h3 = ($h3 ^ (($b << 2) & 0xFF));
+            $h3 = ($h3 * $prime) & 0xFFFFFFFF;
+
+            $h4 = ($h4 ^ (($b << 3) & 0xFF));
+            $h4 = ($h4 * $prime) & 0xFFFFFFFF;
+        }
+        return self::fmix($h1) . self::fmix($h2) . self::fmix($h3) . self::fmix($h4);
+    }
+
+    /**
+     * Generate a compute intensive but non cryptographic purpose fixed length hash
+     * @param string $data
+     * @return int
+     */
+    public static function hashInt(string $data): int
+    {
+        if (!self::$byteMap) {
+            self::fillByteMap();
+        }
+        $h1 = 0x811c9dc5;
+        $prime = 0x01000193;
+
+        $len = strlen($data);
+        for ($i = 0; $i < $len; $i++) {
+            $h1 = (($h1 ^ self::$byteMap[$data[$i]]) * $prime) & 0xFFFFFFFF;
+        }
+        return self::fmix($h1, false);
+    }
+
+    /**
+     * Internal hash helper
+     * @param int $h
+     * @param bool $returnAsHex If false, return integer instead of hex string
+     * @return string|int
+     */
+    private static function fmix(int $h, bool $returnAsHex = true): string|int
+    {
+        $h = $h & 0xFFFFFFFF;
+        $h ^= ($h >> 16);
+
+        $b_low1 = 0xCA6B;
+        $b_low2 = 0xAE35;
+
+        $a_low1 = $h & 0xFFFF;
+        $a_high1 = ($h >> 16) & 0xFFFF;
+        $h = ($a_low1 * $b_low1 +
+                ((($a_high1 * $b_low1 + $a_low1 * 0x85EB) << 16) & 0xFFFFFFFF)) & 0xFFFFFFFF;
+
+        $h ^= ($h >> 13);
+
+        $a_low2 = $h & 0xFFFF;
+        $a_high2 = ($h >> 16) & 0xFFFF;
+        $h = ($a_low2 * $b_low2 +
+                ((($a_high2 * $b_low2 + $a_low2 * 0xC2B2) << 16) & 0xFFFFFFFF)) & 0xFFFFFFFF;
+
+        $h ^= ($h >> 16);
+        if ($returnAsHex) {
+            return str_pad(dechex($h), 8, '0', STR_PAD_LEFT);
+        }
+        return $h;
+    }
+
+    private static function fillByteMap(): void
+    {
+        for ($i = 0; $i <= 255; $i++) {
+            self::$byteMap[chr($i)] = $i;
+        }
     }
 
 }
