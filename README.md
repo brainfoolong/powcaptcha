@@ -1,15 +1,17 @@
-# POWCAPTCHA
+![Logo](media/logo.svg)
 
-`Proof of Work Captcha/Challenge/Brute Force protection`, without any required user interaction. As of todays technology and
+[![Powcaptcha Tests](https://github.com/brainfoolong/powcaptcha/actions/workflows/tests.yml/badge.svg)](https://github.com/brainfoolong/powcaptcha/actions/workflows/tests.yml)
+
+**Powcaptcha** - Proof Of Work Captcha/Challenge/Brute Force protection, without any required user interaction. As of todays technology and
 capability of AI that can solve any "I am human" captcha faster than any human on earth, protecting backends is now different from what we are all used to from
 the past.
 
 Having a captcha that need to be solved by hand has absolutely no advantage today nor it can proove the existence of humans in the progress. Instead, if you
 wish to protect your backend from to much requests in a short period (brute force), you need something that is hard to calculate, but easy to verify.
 
-POWCAPTCHA has a simply approach, it creates invisible puzzles that the client must solve. This can be as expensive as you want. Verifying the solved puzzle is
+Powcaptcha has a simply approach, it creates invisible puzzles that the client must solve. This can be as expensive as you want. Verifying the solved puzzle is
 cheap on server side, so you don't waste server resources. It can even be used for machine-to-machine interactions, for example to protect your API.
-Technically, POWCAPTCHA is not a captcha per-se, it's just a way to slow down attempts that can be made in a certain amount of time (Just a brute force
+Technically, Powcaptcha is not a captcha per-se, it's just a way to slow down attempts that can be made in a certain amount of time (Just a brute force
 protection). But we still use the word captcha as almost everyone is used to it.
 
 ### Features
