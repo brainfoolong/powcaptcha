@@ -5,27 +5,37 @@ import (
 	"encoding/hex"
 	"errors"
 	"fmt"
-	"io/ioutil"
+	"math"
 	"os"
 	"path/filepath"
+	"strconv"
 	"strings"
 	"time"
 )
 
 type Powcaptcha struct {
 	VerifiedSolutionsFolder string
-	ChallengeSalt string
+	ChallengeSalt           string
+}
+
+type ChallengeResult struct {
+	Difficulty        int
+	PuzzlesString     string
+	NumberPuzzles     int
+	LengthPerSolution int
+	SolutionLengthReq int
+	Threshold         int
 }
 
 // CreateChallenge generates a challenge string consisting of puzzles, each 32 hex characters long.
-func (pc *Powcaptcha) CreateChallenge(puzzles int) (string, error) {
+func (pc *Powcaptcha) CreateChallenge(puzzles int, difficulty int) (string, error) {
 	if puzzles <= 0 {
 		puzzles = 50
 	}
-  if len(pc.ChallengeSalt) <= 0 {
-			return "", errors.New("Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients")
-  }
-	var challenge string
+	if len(pc.ChallengeSalt) <= 0 {
+		return "", errors.New("Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients")
+	}
+	var challenge string = fmt.Sprintf("%d", difficulty)
 	for i := 0; i < puzzles; i++ {
 		b := make([]byte, 16)
 		_, err := rand.Read(b)
@@ -34,33 +44,20 @@ func (pc *Powcaptcha) CreateChallenge(puzzles int) (string, error) {
 		}
 		challenge += hex.EncodeToString(b)
 	}
-  var out = challenge + (pc.Hash(challenge + pc.ChallengeSalt))
+	var out = challenge + pc.Hash(challenge+pc.ChallengeSalt)
 	return out, nil
 }
 
 // VerifySolution verifies the given solution for the challenge.
-func (pc *Powcaptcha) VerifySolution(challengeData, solution string, difficulty int) (bool, error) {
-	if challengeData == "" || len(challengeData) < 32 || (len(challengeData)%32) != 0 {
-		return false, errors.New("invalid challenge string")
-	}
-  if len(pc.ChallengeSalt) <= 0 {
-			return false, errors.New("Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients")
-  }
-  if difficulty <= 0 {
-    difficulty = 4
-  }
-	challengeString := challengeData[: len(challengeData) - 32]
-	challenges := len(challengeString) / 32
-	lengthPerSolution := difficulty + 2
-	solutionLengthRequired := challenges * lengthPerSolution
-	if solution == "" || len(solution) != solutionLengthRequired {
-		return false, errors.New("invalid solution")
-	}
-	challengeHashCalculated := pc.Hash(challengeString + pc.ChallengeSalt)
-	challengeHashGiven := challengeData[len(challengeData) - 32:]
+func (pc *Powcaptcha) VerifySolution(challengeData, solution string) (bool, error) {
+	challengeMeta, err := pc.parseChallengeData(challengeData, true)
 
-	if challengeHashCalculated != challengeHashGiven {
-			return false, errors.New("Invalid challenge hash")
+	if err != nil {
+		return false, err
+	}
+
+	if solution == "" || len(solution) != challengeMeta.SolutionLengthReq {
+		return false, errors.New("invalid solution")
 	}
 
 	// Check if challenge already has been tested
@@ -70,14 +67,13 @@ func (pc *Powcaptcha) VerifySolution(challengeData, solution string, difficulty 
 		return false, nil
 	}
 
-	threshold := pow10(10 - difficulty)
-	for i := 0; i < challenges; i++ {
-		start := i * lengthPerSolution
-		end := start + lengthPerSolution
+	for i := 0; i < challengeMeta.NumberPuzzles; i++ {
+		start := i * challengeMeta.LengthPerSolution
+		end := start + challengeMeta.LengthPerSolution
 		iteration := solution[start:end]
-		challenge := challengeString[i*32 : (i+1)*32]
-		hashVal := hashInt(challenge+iteration)
-		if hashVal > threshold {
+		challenge := challengeMeta.PuzzlesString[i*32 : (i+1)*32]
+		hashVal := hashInt(challenge + iteration)
+		if hashVal > challengeMeta.Threshold {
 			return false, nil
 		}
 	}
@@ -91,41 +87,34 @@ func (pc *Powcaptcha) VerifySolution(challengeData, solution string, difficulty 
 
 	// delete files older than 5 minutes
 	timeThreshold := time.Now().Add(-5 * time.Minute)
-	files, _ := ioutil.ReadDir(pc.VerifiedSolutionsFolder)
+	files, _ := os.ReadDir(pc.VerifiedSolutionsFolder)
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".pow") {
 			path := filepath.Join(pc.VerifiedSolutionsFolder, file.Name())
-			if file.ModTime().Before(timeThreshold) {
+			info, _ := file.Info()
+			if info.ModTime().Before(timeThreshold) {
 				os.Remove(path)
 			}
 		}
 	}
-	_ = ioutil.WriteFile(hashFile, []byte{}, 0644)
+	_ = os.WriteFile(hashFile, []byte{}, 0644)
 	return true, nil
 }
 
 // SolveChallenge solves the given challenge string and returns the solution.
-func (pc *Powcaptcha) SolveChallenge(challengeData string, difficulty int) (string, error) {
-  if difficulty <= 0 {
-    difficulty = 4
-  }
-	if difficulty < 1 || difficulty > 7 {
-		return "", errors.New("difficulty need to be between 1-7")
+func (pc *Powcaptcha) SolveChallenge(challengeData string) (string, error) {
+	challengeMeta, err := pc.parseChallengeData(challengeData, false)
+	if err != nil {
+		return "", err
 	}
-	if challengeData == "" || len(challengeData) < 32 || (len(challengeData)%32) != 0 {
-		return "", errors.New("invalid challenge string")
-	}
-	challengeString := challengeData[: len(challengeData) - 32]
-	challenges := len(challengeString) / 32
 	var solutions []string
-	threshold := pow10(10 - difficulty)
-	maxIterations := pow10(difficulty + 2)
-	for i := 0; i < challenges; i++ {
-		iteration := pow10(difficulty + 1)
-		challenge := challengeString[i*32 : (i+1)*32]
+	maxIterations := pow10(challengeMeta.Difficulty + 2)
+	for i := 0; i < challengeMeta.NumberPuzzles; i++ {
+		iteration := pow10(challengeMeta.Difficulty + 1)
+		challenge := challengeMeta.PuzzlesString[i*32 : (i+1)*32]
 		for ; iteration <= maxIterations; iteration++ {
-			hashVal := hashInt(challenge+fmt.Sprintf("%d", iteration))
-			if hashVal <= threshold {
+			hashVal := hashInt(challenge + fmt.Sprintf("%d", iteration))
+			if hashVal <= challengeMeta.Threshold {
 				solutions = append(solutions, fmt.Sprintf("%d", iteration))
 				break
 			}
@@ -135,7 +124,7 @@ func (pc *Powcaptcha) SolveChallenge(challengeData string, difficulty int) (stri
 }
 
 // hash is a compute-intensive but non-cryptographic fixed length hash.
-func (pc *Powcaptcha) Hash(data string) string{
+func (pc *Powcaptcha) Hash(data string) string {
 	var h1 uint32 = 0x811c9dc5
 	var h2 uint32 = 0x8b8d2a97
 	var h3 uint32 = 0xc9dc5118
@@ -161,7 +150,7 @@ func (pc *Powcaptcha) Hash(data string) string{
 }
 
 // hash is a compute-intensive but non-cryptographic fixed length hash.
-func hashInt(data string) uint32{
+func hashInt(data string) int {
 	var h1 uint32 = 0x811c9dc5
 	var prime uint32 = 0x01000193
 
@@ -171,7 +160,7 @@ func hashInt(data string) uint32{
 		h1 = (h1 ^ uint32(b))
 		h1 = (h1 * prime) & 0xFFFFFFFF
 	}
-	return fmix(h1)
+	return int(fmix(h1))
 }
 
 // fmix is an internal hash helper
@@ -204,4 +193,46 @@ func pow10(x int) uint32 {
 		res *= 10
 	}
 	return uint32(res)
+}
+
+func (pc *Powcaptcha) parseChallengeData(challengeData string, validateChallenge bool) (ChallengeResult, error) {
+	clength := len(challengeData)
+	if clength < 33 || ((clength-1)%32) != 0 {
+		return ChallengeResult{}, errors.New("Invalid challenge data")
+	}
+	if validateChallenge && pc.ChallengeSalt == "" {
+		return ChallengeResult{}, errors.New("Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients")
+	}
+
+	difficulty, err := strconv.Atoi(challengeData[0:1])
+	if err != nil {
+		return ChallengeResult{}, errors.New("Invalid difficulty character")
+	}
+	if difficulty < 1 || difficulty > 7 {
+		return ChallengeResult{}, errors.New("Invalid difficulty, need to be between 1 and 7")
+	}
+
+	puzzlesString := challengeData[1 : clength-32]
+
+	if validateChallenge {
+		challengeHashCalculated := pc.Hash(challengeData[0:clength-32] + pc.ChallengeSalt)
+		challengeHashGiven := challengeData[clength-32:]
+		if challengeHashCalculated != challengeHashGiven {
+			return ChallengeResult{}, errors.New("Invalid challenge hash (" + challengeHashCalculated + " vs " + challengeHashGiven + ")")
+		}
+	}
+
+	numberPuzzles := len(puzzlesString) / 32
+	lengthPerSolution := difficulty + 2
+	solutionLengthRequired := numberPuzzles * lengthPerSolution
+	threshold := int(math.Pow(10, float64(10-difficulty)))
+
+	return ChallengeResult{
+		Difficulty:        difficulty,
+		PuzzlesString:     puzzlesString,
+		NumberPuzzles:     numberPuzzles,
+		LengthPerSolution: lengthPerSolution,
+		SolutionLengthReq: solutionLengthRequired,
+		Threshold:         threshold,
+	}, nil
 }

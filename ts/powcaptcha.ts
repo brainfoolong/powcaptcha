@@ -14,9 +14,10 @@ export default class Powcaptcha {
    * Create a challenge to solve
    * @param {number} puzzles How many puzzles should be included, default = 50 and generates a string with 1600 chars (1.6kB)
    *  Each puzzle is 32 chars long
+   * @param {number} difficulty A number between 1 and 7 - Higher takes longer, 7 probably take several minutes
    * @return {string}
    */
-  public static createChallenge (puzzles: number = 50): string {
+  public static createChallenge (puzzles: number = 50, difficulty: number = 4): string {
     if (!Powcaptcha.challengeSalt) {
       throw new Error('Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients')
     }
@@ -43,7 +44,7 @@ export default class Powcaptcha {
       }
     }
     // browser-strip-end
-    let challenge: string = ''
+    let challenge: string = difficulty + ''
     for (let i = 0; i < puzzles; i++) {
       challenge += randomHash(16)
     }
@@ -54,33 +55,16 @@ export default class Powcaptcha {
    * Verify the given solution
    * @param {string} challengeData
    * @param {string} solution
-   * @param {number} difficulty Must be the same number as with solveChallenge()
    * @return {boolean}
    */
   public static verifySolution (
     challengeData: string,
     solution: string,
-    difficulty: number = 4,
   ): boolean {
-    if (!challengeData || challengeData.length < 32 || (challengeData.length % 32)) {
-      throw new Error('Invalid challenge string')
-    }
-    if (!Powcaptcha.challengeSalt) {
-      throw new Error('Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients')
-    }
-    const challengeString = challengeData.substring(0, challengeData.length - 32)
-    const challenges = challengeString.length / 32
-    const lengthPerSolution = difficulty + 2
-    const solutionLengthRequired = challenges * lengthPerSolution
-    if (!solution || solution.length !== solutionLengthRequired) {
+    const challengeMeta = Powcaptcha.parseChallengeData(challengeData, true)
+
+    if (!solution || solution.length !== challengeMeta.solutionLengthRequired) {
       throw new Error('Invalid solution')
-    }
-
-    const challengeHashCalculated = Powcaptcha.hash(challengeString + Powcaptcha.challengeSalt)
-    const challengeHashGiven = challengeData.substring(challengeData.length - 32)
-
-    if (challengeHashCalculated !== challengeHashGiven) {
-      throw new Error('Invalid challenge hash')
     }
 
     // browser-strip-start
@@ -95,11 +79,9 @@ export default class Powcaptcha {
     }
     // browser-strip-end
 
-    const threshold = Math.pow(10, 10 - difficulty)
-    for (let i = 0; i < challenges; i++) {
-      const iteration = solution.substring(i * lengthPerSolution, i * lengthPerSolution + lengthPerSolution)
-      const challenge = challengeString.substring(i * 32, i * 32 + 32)
-      if (Powcaptcha.hashInt(challenge + iteration) <= threshold) {
+    for (let i = 0; i < challengeMeta.numberPuzzles; i++) {
+      const iteration = solution.substring(i * challengeMeta.lengthPerSolution, i * challengeMeta.lengthPerSolution + challengeMeta.lengthPerSolution)
+      if (Powcaptcha.hashInt(challengeMeta.puzzlesString.substring(i * 32, i * 32 + 32) + iteration) <= challengeMeta.threshold) {
         continue
       }
       return false
@@ -125,31 +107,24 @@ export default class Powcaptcha {
 
   /**
    * Solves this given challenge
-   * @param {string} challengeString
-   * @param {number} difficulty Higher numbers increase difficulty, highest value may need several minutes per puzzle
+   * @param {string} challengeData
    * @param {Function|null} progressHandler If set, called for each puzzle with the total progress being passed as 0-1
    * @return {Promise<string>}
    */
   public static async solveChallenge (
-    challengeString: string,
-    difficulty: number = 4,
+    challengeData: string,
     progressHandler: ((progress: number) => void) | null = null,
   ): Promise<string> {
-    if (difficulty < 1 || difficulty > 7) {
-      throw new Error('Difficulty need to be between 1-7')
-    }
-    if (!challengeString || challengeString.length < 32 || (challengeString.length % 32)) {
-      throw new Error('Invalid challenge string')
-    }
-    const totalWorkers = (challengeString.length / 32) - 1
+    const challengeMeta = Powcaptcha.parseChallengeData(challengeData, false)
+    const totalWorkers = challengeMeta.numberPuzzles
     if (typeof window !== 'undefined' && typeof Worker === 'function') {
       let workerContentsBase = Powcaptcha.toString() + ';\n'
       const promises = [] as any
       let doneWorkers = 0
       for (let i = 0; i < totalWorkers; i++) {
         let workerContents = workerContentsBase
-        const challenge = challengeString.substring(i * 32, i * 32 + 32)
-        workerContents += '(async()=>{self.postMessage(Powcaptcha.solverWorker(' + JSON.stringify(challenge) + ', ' + JSON.stringify(difficulty) + '))})()'
+        const challenge = challengeMeta.puzzlesString.substring(i * 32, i * 32 + 32)
+        workerContents += '(async()=>{self.postMessage(Powcaptcha.solverWorker(' + JSON.stringify(challenge) + ', ' + JSON.stringify(challengeMeta.difficulty) + '))})()'
         const blob = new Blob([workerContents], { type: 'text/javascript' })
         const worker = new Worker(URL.createObjectURL(blob))
         promises.push(new Promise(resolve => {
@@ -168,7 +143,7 @@ export default class Powcaptcha {
     } else {
       let solutions = ''
       for (let i = 0; i < totalWorkers; i++) {
-        solutions += Powcaptcha.solverWorker(challengeString.substring(i * 32, i * 32 + 32), difficulty)
+        solutions += Powcaptcha.solverWorker(challengeMeta.puzzlesString.substring(i * 32, i * 32 + 32), challengeMeta.difficulty)
         if (progressHandler) {
           progressHandler(1 / totalWorkers * i)
         }
@@ -306,5 +281,43 @@ export default class Powcaptcha {
       }
     }
     return Powcaptcha.encoder(data)
+  }
+
+  private static parseChallengeData (challengeData: string, validateChallenge: boolean): any {
+    const clength = typeof challengeData === 'string' ? challengeData.length : 0
+    if (clength < 33 || ((clength - 1) % 32)) {
+      throw new Error('Invalid challenge data')
+    }
+    if (validateChallenge && !Powcaptcha.challengeSalt) {
+      throw new Error('Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients')
+    }
+    const difficulty = parseInt(challengeData.substring(0, 1))
+    if (difficulty < 1 || difficulty > 7) {
+      throw new Error('Invalid difficulty, need to be between 1 and 7')
+    }
+    const puzzlesString = challengeData.substring(1, clength - 32)
+
+    if (validateChallenge) {
+      const challengeHashCalculated = Powcaptcha.hash(challengeData.substring(0, challengeData.length - 32) + Powcaptcha.challengeSalt)
+      const challengeHashGiven = challengeData.substring(challengeData.length - 32)
+
+      if (challengeHashCalculated !== challengeHashGiven) {
+        throw new Error('Invalid challenge hash')
+      }
+    }
+
+    const numberPuzzles = puzzlesString.length / 32
+    const lengthPerSolution = difficulty + 2
+    const solutionLengthRequired = numberPuzzles * lengthPerSolution
+    const threshold = Math.pow(10, 10 - difficulty)
+
+    return {
+      difficulty,
+      puzzlesString,
+      numberPuzzles,
+      lengthPerSolution,
+      solutionLengthRequired,
+      threshold,
+    }
   }
 }

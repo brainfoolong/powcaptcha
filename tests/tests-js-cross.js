@@ -22,7 +22,6 @@ module.exports = async (Powcaptcha) => {
   let now = getTime()
 
   const puzzles = 50
-  const difficulty = 4
 
   for (const type of types) {
     const challenge = fs.readFileSync(Powcaptcha.verifiedSolutionsFolder + '/cross-challenge/' + type).toString()
@@ -31,14 +30,14 @@ module.exports = async (Powcaptcha) => {
       fs.unlinkSync(hashFile)
     }
     let count = 0
-    const solution = await Powcaptcha.solveChallenge(challenge, difficulty, (progress) => {
+    const solution = await Powcaptcha.solveChallenge(challenge, (progress) => {
       count++
     })
     if (count !== puzzles) {
       throw new Error('Cannot solve challenges with ' + puzzles + ' progress callbacks (' + count + ' given)')
     }
     logTime('Challenge from ' + type + ' solved')
-    let verification = Powcaptcha.verifySolution(challenge, solution, difficulty)
+    let verification = Powcaptcha.verifySolution(challenge, solution)
     if (fs.existsSync(hashFile)) {
       fs.unlinkSync(hashFile)
     }

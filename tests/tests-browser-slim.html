@@ -33,7 +33,7 @@
     for (let i = 0; i < fixedChallenges.challenges.length; i++) {
       const challengeString = fixedChallenges.challenges[i]
       const solutionExpected = fixedChallenges.solutions[i]
-      const solution = await Powcaptcha.solveChallenge(challengeString, solutionExpected.difficulty, () => {
+      const solution = await Powcaptcha.solveChallenge(challengeString, () => {
         callbacksDone++
         progressBar.value = 100 / totalCallbacks * callbacksDone
       })

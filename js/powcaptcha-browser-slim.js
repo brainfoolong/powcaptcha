@@ -2,27 +2,21 @@
 class Powcaptcha {
     /**
      * Solves this given challenge
-     * @param {string} challengeString
-     * @param {number} difficulty Higher numbers increase difficulty, highest value may need several minutes per puzzle
+     * @param {string} challengeData
      * @param {Function|null} progressHandler If set, called for each puzzle with the total progress being passed as 0-1
      * @return {Promise<string>}
      */
-    static async solveChallenge(challengeString, difficulty = 4, progressHandler = null) {
-        if (difficulty < 1 || difficulty > 7) {
-            throw new Error('Difficulty need to be between 1-7');
-        }
-        if (!challengeString || challengeString.length < 32 || (challengeString.length % 32)) {
-            throw new Error('Invalid challenge string');
-        }
-        const totalWorkers = (challengeString.length / 32) - 1;
+    static async solveChallenge(challengeData, progressHandler = null) {
+        const challengeMeta = Powcaptcha.parseChallengeData(challengeData, false);
+        const totalWorkers = challengeMeta.numberPuzzles;
         if (typeof window !== 'undefined' && typeof Worker === 'function') {
             let workerContentsBase = Powcaptcha.toString() + ';\n';
             const promises = [];
             let doneWorkers = 0;
             for (let i = 0; i < totalWorkers; i++) {
                 let workerContents = workerContentsBase;
-                const challenge = challengeString.substring(i * 32, i * 32 + 32);
-                workerContents += '(async()=>{self.postMessage(Powcaptcha.solverWorker(' + JSON.stringify(challenge) + ', ' + JSON.stringify(difficulty) + '))})()';
+                const challenge = challengeMeta.puzzlesString.substring(i * 32, i * 32 + 32);
+                workerContents += '(async()=>{self.postMessage(Powcaptcha.solverWorker(' + JSON.stringify(challenge) + ', ' + JSON.stringify(challengeMeta.difficulty) + '))})()';
                 const blob = new Blob([workerContents], { type: 'text/javascript' });
                 const worker = new Worker(URL.createObjectURL(blob));
                 promises.push(new Promise(resolve => {
@@ -42,7 +36,7 @@ class Powcaptcha {
         else {
             let solutions = '';
             for (let i = 0; i < totalWorkers; i++) {
-                solutions += Powcaptcha.solverWorker(challengeString.substring(i * 32, i * 32 + 32), difficulty);
+                solutions += Powcaptcha.solverWorker(challengeMeta.puzzlesString.substring(i * 32, i * 32 + 32), challengeMeta.difficulty);
                 if (progressHandler) {
                     progressHandler(1 / totalWorkers * i);
                 }
@@ -154,6 +148,39 @@ class Powcaptcha {
             };
         }
         return Powcaptcha.encoder(data);
+    }
+    static parseChallengeData(challengeData, validateChallenge) {
+        const clength = typeof challengeData === 'string' ? challengeData.length : 0;
+        if (clength < 33 || ((clength - 1) % 32)) {
+            throw new Error('Invalid challenge data');
+        }
+        if (validateChallenge && !Powcaptcha.challengeSalt) {
+            throw new Error('Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients');
+        }
+        const difficulty = parseInt(challengeData.substring(0, 1));
+        if (difficulty < 1 || difficulty > 7) {
+            throw new Error('Invalid difficulty, need to be between 1 and 7');
+        }
+        const puzzlesString = challengeData.substring(1, clength - 32);
+        if (validateChallenge) {
+            const challengeHashCalculated = Powcaptcha.hash(challengeData.substring(0, challengeData.length - 32) + Powcaptcha.challengeSalt);
+            const challengeHashGiven = challengeData.substring(challengeData.length - 32);
+            if (challengeHashCalculated !== challengeHashGiven) {
+                throw new Error('Invalid challenge hash');
+            }
+        }
+        const numberPuzzles = puzzlesString.length / 32;
+        const lengthPerSolution = difficulty + 2;
+        const solutionLengthRequired = numberPuzzles * lengthPerSolution;
+        const threshold = Math.pow(10, 10 - difficulty);
+        return {
+            difficulty,
+            puzzlesString,
+            numberPuzzles,
+            lengthPerSolution,
+            solutionLengthRequired,
+            threshold,
+        };
     }
 }
 

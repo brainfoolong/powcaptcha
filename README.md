@@ -28,7 +28,7 @@ protection). But we still use the word captcha as almost everyone is used to it.
 
 - Blazing fast server-side verification, don't waste any server resources to verify the clients solution
 - Variable challenge/puzzle difficulty for the client (up to multiple minutes challenge calculation if required)
-- Super slim browser library (~2kB unzipped, ~1.3 kB zipped)
+- Super slim browser library (~3kB unzipped, ~2 kB zipped)
 - No external dependencies, neither in the browser nor on the server
 - No tracking, no ads, just open-source
 - Self hosted
@@ -52,9 +52,9 @@ Powcaptcha::$verifiedSolutionsFolder = 'path-to-a-local-new-empty-temporary-dire
 Powcaptcha::$challengeSalt = 'yourrandomsecretsalt';
 $puzzles = 50;
 $difficulty = 4;
-$challenge = Powcaptcha::createChallenge($puzzles); // send this to client
+$challenge = Powcaptcha::createChallenge($puzzles, $difficulty); // send this to client
 $solution = "comes from the client"; // to test, $solution = Powcaptcha::solveChallenge($challenge);
-$verification = Powcaptcha::verifySolution($challenge, $solution, $difficulty); // 
+$verification = Powcaptcha::verifySolution($challenge, $solution); // 
 if ($verification){
     // success
 }
@@ -69,9 +69,9 @@ Powcaptcha.verifiedSolutionsFolder = 'path-to-a-local-new-empty-temporary-direct
 Powcaptcha.challengeSalt = 'yourrandomsecretsalt';
 const puzzles = 50
 const difficulty = 4
-const challenge = Powcaptcha.createChallenge(puzzles); // send this to client
+const challenge = Powcaptcha.createChallenge(puzzles, difficulty); // send this to client
 const solution = "comes from the client"; // to test, const solution = await Powcaptcha.solveChallenge(challenge);
-const verification = Powcaptcha.verifySolution(challenge, solution, difficulty); // 
+const verification = Powcaptcha.verifySolution(challenge, solution); // 
 if (verification) {
   // success
 }
@@ -88,9 +88,8 @@ if (verification) {
     (async () => {
         const p = document.getElementById('powcaptcha_progress')
         const s = document.getElementById('powcaptcha_solution')
-        const difficulty = 4
         const challenge = 'must come from backend -> Powcaptcha.createChallenge()'
-        const solution = await Powcaptcha.solveChallenge(challenge, difficulty, (progress) => {
+        const solution = await Powcaptcha.solveChallenge(challenge, (progress) => {
             p.value = progress * 100
         })
         s.value = solution
@@ -120,9 +119,9 @@ func main() {
   }
   puzzles := 50
   difficulty := 4    
-  var challenge = pc.CreateChallenge(puzzles) // send this to client
+  var challenge = pc.CreateChallenge(puzzles, difficulty) // send this to client
   var solution = "comes from the client"; // to test, var solution = pc.SolveChallenge(challenge)
-  var verification = pc.VerifySolution(challenge, solution, difficulty)
+  var verification = pc.VerifySolution(challenge, solution)
   if (verification){
     // success
   }

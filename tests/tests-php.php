@@ -23,31 +23,31 @@ $fixedChallenges = json_decode(file_get_contents(__DIR__ . '/challenges.json'), 
 
 foreach ($fixedChallenges['challenges'] as $i => $challengeString) {
     $solutionExpected = $fixedChallenges['solutions'][$i];
-    $solution = Powcaptcha::solveChallenge($challengeString, $solutionExpected['difficulty']);
+    $solution = Powcaptcha::solveChallenge($challengeString);
     if ($solution !== $solutionExpected['solution']) {
         throw new Exception('Solution for fixed challenge ' . $i . ' not correct');
     }
 }
 logTime(count($fixedChallenges['challenges']) . ' fixed challenges correctly solved');
 
-$challenge = Powcaptcha::createChallenge($puzzles);
+$challenge = Powcaptcha::createChallenge($puzzles, $difficulty);
 logTime('Challenge created');
 
-$solution = Powcaptcha::solveChallenge($challenge, $difficulty);
+$solution = Powcaptcha::solveChallenge($challenge);
 
 logTime('Challenge solved');
 
-$verification = Powcaptcha::verifySolution($challenge, $solution, $difficulty);
+$verification = Powcaptcha::verifySolution($challenge, $solution);
 if (!$verification) {
     throw new Exception('Cannot verify solution');
 }
 logTime('Solution verified');
 
-$verification = Powcaptcha::verifySolution($challenge, $solution, $difficulty);
+$verification = Powcaptcha::verifySolution($challenge, $solution);
 if ($verification) {
     throw new Exception('Solution already verified but still, verifySolution() returns true');
 }
 logTime('Verifying same challenge again is invalid, this is correct');
 
-$challenge = Powcaptcha::createChallenge($puzzles);
+$challenge = Powcaptcha::createChallenge($puzzles, $difficulty);
 file_put_contents(__DIR__ . "/../tmp/cross-challenge/php", $challenge);

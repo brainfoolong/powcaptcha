@@ -27,7 +27,7 @@ foreach ($types as $type) {
     $solution = Powcaptcha::solveChallenge($challenge, $difficulty);
     logTime('Challenge from ' . $type . ' solved', $now);
 
-    $verification = Powcaptcha::verifySolution($challenge, $solution, $difficulty);
+    $verification = Powcaptcha::verifySolution($challenge, $solution);
     if (file_exists($hashFile)) {
         unlink($hashFile);
     }

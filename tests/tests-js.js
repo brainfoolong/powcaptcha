@@ -26,7 +26,7 @@ module.exports = async (Powcaptcha, crossChallengePath) => {
   for (let i = 0; i < fixedChallenges.challenges.length; i++) {
     const challengeString = fixedChallenges.challenges[i]
     const solutionExpected = fixedChallenges.solutions[i]
-    const solution = await Powcaptcha.solveChallenge(challengeString, solutionExpected.difficulty)
+    const solution = await Powcaptcha.solveChallenge(challengeString)
     if (solution !== solutionExpected.solution) {
       throw new Error('Solution for fixed challenge ' + i + ' not correct')
     }
@@ -36,26 +36,27 @@ module.exports = async (Powcaptcha, crossChallengePath) => {
   const puzzles = 50
   const difficulty = 4
 
-  const challenge = Powcaptcha.createChallenge(puzzles)
+  let challenge = Powcaptcha.createChallenge(puzzles, difficulty)
   logTime('Challenge created')
   let count = 0
-  const solution = await Powcaptcha.solveChallenge(challenge, difficulty, (progress) => {
+  const solution = await Powcaptcha.solveChallenge(challenge, (progress) => {
     count++
   })
   if (count !== puzzles) {
     throw new Error('Cannot solve challenges with ' + puzzles + ' progress callbacks (' + count + ' given)')
   }
   logTime('Challenge solved')
-  let verification = Powcaptcha.verifySolution(challenge, solution, difficulty)
+  let verification = Powcaptcha.verifySolution(challenge, solution)
   if (!verification) {
     throw new Error('Cannot verify solution')
   }
   logTime('Solution verified')
-  verification = Powcaptcha.verifySolution(challenge, solution, difficulty)
+  verification = Powcaptcha.verifySolution(challenge, solution)
   if (verification) {
     throw new Error('Solution already verified but still, verifySolution() returns true')
   }
   logTime('Verifying same challenge again is invalid, this is correct')
 
+  challenge = Powcaptcha.createChallenge(puzzles, difficulty)
   fs.writeFileSync(__dirname + '/../tmp/cross-challenge/' + crossChallengePath, challenge)
 }

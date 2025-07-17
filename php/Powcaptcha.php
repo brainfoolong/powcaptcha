@@ -13,16 +13,17 @@ class Powcaptcha
 
     /**
      * Create a challenge to solve
-     * @param int $puzzles How many puzzles should be included, default = 50 and generates a string with 1600 chars (1.6kB)
+     * @param int $puzzles How many puzzles should be generated, default = 50 and generates a string with 1600 chars (1.6kB)
      *  Each puzzle is 32 chars long
+     * @param int $difficulty A number between 1 and 7 - Higher takes longer, 7 probably take several minutes
      * @return string
      */
-    public static function createChallenge(int $puzzles = 50): string
+    public static function createChallenge(int $puzzles = 50, int $difficulty = 4): string
     {
         if (!self::$challengeSalt) {
-            throw new Exception('Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients');
+            throw new Exception('Powcaptcha::challengeSalt required, should be a random value not exposed to solver clients');
         }
-        $challenge = '';
+        $challenge = (string)$difficulty;
         for ($i = 0; $i < $puzzles; $i++) {
             $challenge .= bin2hex(random_bytes(16));
         }
@@ -33,34 +34,14 @@ class Powcaptcha
      * Verify the given solution
      * @param string $challengeData
      * @param string $solution
-     * @param int $difficulty Must be the same number as with solveChallenge()
      * @return bool
      */
-    public static function verifySolution(string $challengeData, string $solution, int $difficulty = 4): bool
+    public static function verifySolution(string $challengeData, string $solution): bool
     {
-        if (
-            !$challengeData ||
-            strlen($challengeData) < 32 ||
-            (strlen($challengeData) % 32) !== 0
-        ) {
-            throw new Exception('Invalid challenge string');
-        }
-        if (!self::$challengeSalt) {
-            throw new Exception('Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients');
-        }
-        $challengeString = substr($challengeData, 0, -32);
-        $challenges = strlen($challengeString) / 32;
-        $lengthPerSolution = $difficulty + 2;
-        $solutionLengthRequired = $challenges * $lengthPerSolution;
-        if (!$solution || strlen($solution) !== $solutionLengthRequired) {
+        $challengeMeta = self::parseChallengeData($challengeData, true);
+
+        if (!$solution || strlen($solution) !== $challengeMeta['solutionLengthRequired']) {
             throw new Exception('Invalid solution');
-        }
-
-        $challengeHashCalculated = self::hash($challengeString . self::$challengeSalt);
-        $challengeHashGiven = substr($challengeData, -32);
-
-        if ($challengeHashCalculated !== $challengeHashGiven) {
-            throw new Exception('Invalid challenge hash');
         }
 
         // check if challenge already has been tested
@@ -69,11 +50,10 @@ class Powcaptcha
             return false;
         }
 
-        $threshold = 10 ** (10 - $difficulty);
-        for ($i = 0; $i < $challenges; $i++) {
-            $iteration = substr($solution, $i * $lengthPerSolution, $lengthPerSolution);
-            $challenge = substr($challengeData, $i * 32, 32);
-            if (self::hashInt($challenge . $iteration) <= $threshold) {
+        for ($i = 0; $i < $challengeMeta['numberPuzzles']; $i++) {
+            $iteration = substr($solution, $i * $challengeMeta['lengthPerSolution'], $challengeMeta['lengthPerSolution']);
+            $challenge = substr($challengeMeta['puzzlesString'], $i * 32, 32);
+            if (self::hashInt($challenge . $iteration) <= $challengeMeta['threshold']) {
                 continue;
             }
             return false;
@@ -100,38 +80,26 @@ class Powcaptcha
     /**
      * Solves this given challenge
      * @param string $challengeData
-     * @param int $difficulty Higher numbers increase difficulty, highest value may need several minutes per puzzle
      * @return string
      */
-    public static function solveChallenge(string $challengeData, int $difficulty = 4): string
+    public static function solveChallenge(string $challengeData): string
     {
-        if ($difficulty < 1 || $difficulty > 7) {
-            throw new Exception('Difficulty need to be between 1-7');
-        }
-        if (
-            !$challengeData ||
-            strlen($challengeData) < 32 ||
-            (strlen($challengeData) % 32) !== 0
-        ) {
-            throw new Exception('Invalid challenge string');
-        }
-        $challengeString = substr($challengeData, 0, -32);
-        $challenges = strlen($challengeString) / 32;
-        $solutions = [];
-        $threshold = 10 ** (10 - $difficulty);
-        $maxIterations = 10 ** ($difficulty + 2);
-        for ($i = 0; $i < $challenges; $i++) {
-            $iteration = 10 ** ($difficulty + 1);
-            $challenge = substr($challengeString, $i * 32, 32);
+        $challengeMeta = self::parseChallengeData($challengeData, false);
+
+        $solutions = '';
+        $maxIterations = 10 ** ($challengeMeta['difficulty'] + 2);
+        for ($i = 0; $i < $challengeMeta['numberPuzzles']; $i++) {
+            $iteration = 10 ** ($challengeMeta['difficulty'] + 1);
+            $challenge = substr($challengeMeta['puzzlesString'], $i * 32, 32);
             while ($iteration <= $maxIterations) {
-                if (self::hashInt($challenge . $iteration) <= $threshold) {
-                    $solutions[] = $iteration;
+                if (self::hashInt($challenge . $iteration) <= $challengeMeta['threshold']) {
+                    $solutions .= $iteration;
                     continue 2;
                 }
                 $iteration++;
             }
         }
-        return implode('', $solutions);
+        return $solutions;
     }
 
     /**
@@ -227,6 +195,48 @@ class Powcaptcha
         for ($i = 0; $i <= 255; $i++) {
             self::$byteMap[chr($i)] = $i;
         }
+    }
+
+    /**
+     * @return array{difficulty: int, puzzlesString: string, numberPuzzles: int, lengthPerSolution: int, solutionLengthRequired: int, threshold: int}
+     */
+    private static function parseChallengeData(string $challengeData, bool $validateChallenge): array
+    {
+        $clength = strlen($challengeData);
+        if ($clength < 33 || (($clength - 1) % 32)) {
+            throw new Exception('Invalid challenge data');
+        }
+        if ($validateChallenge && !self::$challengeSalt) {
+            throw new Exception('Powcaptcha::challengeSalt required, should be a random value not exposed to solver clients');
+        }
+        $difficulty = (int)substr($challengeData, 0, 1);
+        if ($difficulty < 1 || $difficulty > 7) {
+            throw new Exception('Invalid difficulty, need to be between 1 and 7');
+        }
+        $puzzlesString = substr($challengeData, 1, $clength - 33);
+
+        if ($validateChallenge) {
+            $challengeHashCalculated = self::hash(substr($challengeData, 0, $clength - 32) . self::$challengeSalt);
+            $challengeHashGiven = substr($challengeData, $clength - 32);
+
+            if ($challengeHashCalculated !== $challengeHashGiven) {
+                throw new Exception('Invalid challenge hash');
+            }
+        }
+
+        $numberPuzzles = strlen($puzzlesString) / 32;
+        $lengthPerSolution = $difficulty + 2;
+        $solutionLengthRequired = $numberPuzzles * $lengthPerSolution;
+        $threshold = 10 ** (10 - $difficulty);
+
+        return [
+            'difficulty' => $difficulty,
+            'puzzlesString' => $puzzlesString,
+            'numberPuzzles' => $numberPuzzles,
+            'lengthPerSolution' => $lengthPerSolution,
+            'solutionLengthRequired' => $solutionLengthRequired,
+            'threshold' => $threshold,
+        ];
     }
 
 }
