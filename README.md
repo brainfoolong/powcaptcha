@@ -15,7 +15,7 @@ protection). But we still use the word captcha as almost everyone is used to it.
 ### Features
 
 - Multiple architectures, cross-browser
-    - Browser [(Check Support)](https://caniuse.com/mdn-api_subtlecrypto_digest)
+    - Cross-Browser, no IE
     - PHP 8+
     - NodeJS 16+
     - Bun
@@ -24,7 +24,7 @@ protection). But we still use the word captcha as almost everyone is used to it.
     - GoLang
     - Help implement more...
 
-- Fast server-side verification
+- Blazing fast server-side verification, don't waste any server resources to verify the clients solution
 - Variable challenge/puzzle difficulty for the client (up to multiple minutes challenge calculation if required)
 - Super slim browser library (~2kB unzipped, ~1.3 kB zipped)
 - No external dependencies, neither in the browser nor on the server
