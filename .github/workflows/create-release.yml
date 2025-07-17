@@ -17,14 +17,28 @@ jobs:
         with:
           bun-version: latest
 
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 22.x
+
       - name: Install deps
         run: bun install
 
       - name: Run build progress
         run: bun run dist
 
-      - name: Run tests
+      - name: Run backend tests
         run: cd tests && bash run-all-tests.sh
+
+      - name: Start testserver
+        run: bun tests/http-server-for-tests.js &
+
+      - name: Install Playwright Browsers
+        run: npx playwright install --with-deps
+
+      - name: Run Playwright browser tests
+        run: npx playwright test
 
       - name: Release
         uses: softprops/action-gh-release@v2
