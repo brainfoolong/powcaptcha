@@ -29,6 +29,7 @@ jobs:
       - name: Release
         uses: softprops/action-gh-release@v2
         with:
+          prerelease: true
           files: |
             js/powcaptcha.js
             js/powcaptcha.min.js
