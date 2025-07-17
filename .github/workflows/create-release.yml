@@ -1,0 +1,44 @@
+name: Create Release
+
+on:
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          ref: ${{ github.ref_name }}
+
+      - name: Install bun
+        uses: oven-sh/setup-bun@v2
+        with:
+          bun-version: latest
+
+      - name: Install deps
+        run: bun install
+
+      - name: Run build progress
+        run: bun run dist
+
+      - name: Run tests
+        run: cd tests && bash run-all-tests.sh
+
+      - name: Release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            js/powcaptcha.js
+            js/powcaptcha.min.js
+            js/powcaptcha-browser.js
+            js/powcaptcha-browser.min.js
+            js/powcaptcha-browser-slim.js
+            js/powcaptcha-browser-slim.min.js
+            ts/powcaptcha.ts
+            go/powcaptcha.go
+            go/go.mod
+            php/Powcaptcha.php
+            LICENSE
+            README.md
