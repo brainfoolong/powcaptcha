@@ -33,8 +33,9 @@ func main() {
   _, currentfile, _, _ := runtime.Caller(0)
 
   var currentdir = filepath.Dir(currentfile)
-  pc := powcaptcha.Powcaptcha{
-    TmpFolder: filepath.Join(currentdir, "../tmp"),
+  pc := powcaptcha.Powcaptcha {
+    VerifiedSolutionsFolder: filepath.Join(currentdir, "../tmp"),
+    ChallengeSalt: "randomtestsalt",
   }
 
   puzzles := 50
@@ -51,7 +52,6 @@ func main() {
     panic(err)
   }
 
-  // Solve and verify fixed challenges
   for i, challengeString := range fixedChallenges.Challenges {
     solutionExpected := fixedChallenges.Solutions[i]
     solution, err := pc.SolveChallenge(challengeString, solutionExpected.Difficulty)
@@ -62,7 +62,7 @@ func main() {
       panic(fmt.Sprintf("Solution for fixed challenge %d not correct", i))
     }
   }
-  logTime("Fixed challenges solved and verified")
+  logTime("Fixed challenges correctly solved")
 
   challenge, err := pc.CreateChallenge(puzzles)
   if err != nil {
@@ -98,7 +98,7 @@ func main() {
   if err != nil {
     panic(err)
   }
-  crossChallengePath := filepath.Join(pc.TmpFolder, "cross-challenge", "go")
+  crossChallengePath := filepath.Join(pc.VerifiedSolutionsFolder, "cross-challenge", "go")
   if err := os.WriteFile(crossChallengePath, []byte(challenge), 0777); err != nil {
     panic(err)
   }

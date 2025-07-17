@@ -1,0 +1,48 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>POWCAPTCHA Browser Tests</title>
+    <script src="../js/powcaptcha-browser-slim.min.js"></script>
+    <meta name="viewport" content="width=device-width, initial-scale=1, minimum-scale=1">
+</head>
+<body>
+<div id="console" style="white-space: pre"></div>
+<progress style="width:min(300px, 100vw)" value="1" max="100"></progress>
+<script>
+  (async () => {
+    function getTime () {
+      if (typeof performance !== 'undefined') {
+        return performance.now()
+      }
+      return new Date().getTime()
+    }
+
+    function logTime (msg) {
+      const t = getTime()
+      const diff = t - now
+      now = t
+      document.getElementById('console').append(msg + ' (Took ' + diff.toFixed(2) + 'ms)\n')
+    }
+
+    let now = getTime()
+    const progressBar = document.querySelector('progress')
+    const fixedChallenges = await (await fetch('challenges.json')).json()
+    let totalCallbacks = 50 * fixedChallenges.challenges.length
+    let callbacksDone = 0
+    for (let i = 0; i < fixedChallenges.challenges.length; i++) {
+      const challengeString = fixedChallenges.challenges[i]
+      const solutionExpected = fixedChallenges.solutions[i]
+      const solution = await Powcaptcha.solveChallenge(challengeString, solutionExpected.difficulty, () => {
+        callbacksDone++
+        progressBar.value = 100 / totalCallbacks * callbacksDone
+      })
+      if (solution !== solutionExpected.solution) {
+        throw new Error('Solution for fixed challenge ' + i + ' not correct')
+      }
+    }
+    logTime(fixedChallenges.challenges.length + ' fixed challenges correctly solved')
+  })()
+</script>
+</body>
+</html>

@@ -13,7 +13,8 @@ import (
 )
 
 type Powcaptcha struct {
-	TmpFolder string
+	VerifiedSolutionsFolder string
+	ChallengeSalt string
 }
 
 // CreateChallenge generates a challenge string consisting of puzzles, each 32 hex characters long.
@@ -21,36 +22,50 @@ func (pc *Powcaptcha) CreateChallenge(puzzles int) (string, error) {
 	if puzzles <= 0 {
 		puzzles = 50
 	}
-	var arr []string
+  if len(pc.ChallengeSalt) <= 0 {
+			return "", errors.New("Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients")
+  }
+	var challenge string
 	for i := 0; i < puzzles; i++ {
 		b := make([]byte, 16)
 		_, err := rand.Read(b)
 		if err != nil {
 			return "", fmt.Errorf("failed to generate random bytes: %w", err)
 		}
-		arr = append(arr, hex.EncodeToString(b))
+		challenge += hex.EncodeToString(b)
 	}
-	return strings.Join(arr, ""), nil
+  var out = challenge + (pc.Hash(challenge + pc.ChallengeSalt))
+	return out, nil
 }
 
 // VerifySolution verifies the given solution for the challenge.
-func (pc *Powcaptcha) VerifySolution(challengeString, solution string, difficulty int) (bool, error) {
-	if challengeString == "" || len(challengeString) < 32 || (len(challengeString)%32) != 0 {
+func (pc *Powcaptcha) VerifySolution(challengeData, solution string, difficulty int) (bool, error) {
+	if challengeData == "" || len(challengeData) < 32 || (len(challengeData)%32) != 0 {
 		return false, errors.New("invalid challenge string")
 	}
+  if len(pc.ChallengeSalt) <= 0 {
+			return false, errors.New("Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients")
+  }
   if difficulty <= 0 {
     difficulty = 4
   }
+	challengeString := challengeData[: len(challengeData) - 32]
 	challenges := len(challengeString) / 32
 	lengthPerSolution := difficulty + 2
 	solutionLengthRequired := challenges * lengthPerSolution
 	if solution == "" || len(solution) != solutionLengthRequired {
 		return false, errors.New("invalid solution")
 	}
+	challengeHashCalculated := pc.Hash(challengeString + pc.ChallengeSalt)
+	challengeHashGiven := challengeData[len(challengeData) - 32:]
+
+	if challengeHashCalculated != challengeHashGiven {
+			return false, errors.New("Invalid challenge hash")
+	}
 
 	// Check if challenge already has been tested
-	challengeHash := pc.Hash(challengeString)
-	hashFile := filepath.Join(pc.TmpFolder, challengeHash+".pow")
+	challengeHash := pc.Hash(challengeData)
+	hashFile := filepath.Join(pc.VerifiedSolutionsFolder, challengeHash+".pow")
 	if _, err := os.Stat(hashFile); err == nil {
 		return false, nil
 	}
@@ -67,19 +82,19 @@ func (pc *Powcaptcha) VerifySolution(challengeString, solution string, difficult
 		}
 	}
 
-	if pc.TmpFolder == "" {
-		return false, errors.New("cannot find tmpFolder for Powcaptcha")
+	if pc.VerifiedSolutionsFolder == "" {
+		return false, errors.New("cannot find VerifiedSolutionsFolder for Powcaptcha")
 	}
-	if stat, err := os.Stat(pc.TmpFolder); err != nil || !stat.IsDir() {
-		return false, errors.New("cannot find tmpFolder for Powcaptcha")
+	if stat, err := os.Stat(pc.VerifiedSolutionsFolder); err != nil || !stat.IsDir() {
+		return false, errors.New("cannot find VerifiedSolutionsFolder for Powcaptcha")
 	}
 
 	// delete files older than 5 minutes
 	timeThreshold := time.Now().Add(-5 * time.Minute)
-	files, _ := ioutil.ReadDir(pc.TmpFolder)
+	files, _ := ioutil.ReadDir(pc.VerifiedSolutionsFolder)
 	for _, file := range files {
 		if strings.HasSuffix(file.Name(), ".pow") {
-			path := filepath.Join(pc.TmpFolder, file.Name())
+			path := filepath.Join(pc.VerifiedSolutionsFolder, file.Name())
 			if file.ModTime().Before(timeThreshold) {
 				os.Remove(path)
 			}
@@ -90,16 +105,17 @@ func (pc *Powcaptcha) VerifySolution(challengeString, solution string, difficult
 }
 
 // SolveChallenge solves the given challenge string and returns the solution.
-func (pc *Powcaptcha) SolveChallenge(challengeString string, difficulty int) (string, error) {
+func (pc *Powcaptcha) SolveChallenge(challengeData string, difficulty int) (string, error) {
   if difficulty <= 0 {
     difficulty = 4
   }
 	if difficulty < 1 || difficulty > 7 {
 		return "", errors.New("difficulty need to be between 1-7")
 	}
-	if challengeString == "" || len(challengeString) < 32 || (len(challengeString)%32) != 0 {
+	if challengeData == "" || len(challengeData) < 32 || (len(challengeData)%32) != 0 {
 		return "", errors.New("invalid challenge string")
 	}
+	challengeString := challengeData[: len(challengeData) - 32]
 	challenges := len(challengeString) / 32
 	var solutions []string
 	threshold := pow10(10 - difficulty)

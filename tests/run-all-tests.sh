@@ -1,4 +1,4 @@
-del "..\tmp\*.pow"
+rm "../tmp/*.pow"
 
 docker compose run --remove-orphans php php /powcaptcha/tests/tests-php.php
 docker compose run --remove-orphans nodejs node /powcaptcha/tests/tests-node.js

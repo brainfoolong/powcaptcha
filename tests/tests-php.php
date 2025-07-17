@@ -13,13 +13,12 @@ function logTime($msg): void
     printf("%s (Took %.2fms)\n", $msg, $diff * 1000);
 }
 
-
 $puzzles = 50;
 $difficulty = 4;
 
-Powcaptcha::$tmpFolder = __DIR__ . '/../tmp';
+Powcaptcha::$verifiedSolutionsFolder = __DIR__ . '/../tmp';
+Powcaptcha::$challengeSalt = 'randomtestsalt';
 
-// Read and decode the JSON file
 $fixedChallenges = json_decode(file_get_contents(__DIR__ . '/challenges.json'), true);
 
 foreach ($fixedChallenges['challenges'] as $i => $challengeString) {
@@ -29,7 +28,7 @@ foreach ($fixedChallenges['challenges'] as $i => $challengeString) {
         throw new Exception('Solution for fixed challenge ' . $i . ' not correct');
     }
 }
-logTime('Fixed challenges solved and verified');
+logTime(count($fixedChallenges['challenges']) . ' fixed challenges correctly solved');
 
 $challenge = Powcaptcha::createChallenge($puzzles);
 logTime('Challenge created');

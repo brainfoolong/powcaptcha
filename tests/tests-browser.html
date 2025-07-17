@@ -31,7 +31,7 @@
 
     const puzzles = 50
     const difficulty = 4
-
+    Powcaptcha.challengeSalt = 'myrandomsalt'
     const challenge = Powcaptcha.createChallenge(puzzles)
     logTime('Challenge created')
     let count = 0

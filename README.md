@@ -26,7 +26,7 @@ protection). But we still use the word captcha as almost everyone is used to it.
 
 - Fast server-side verification
 - Variable challenge/puzzle difficulty for the client (up to multiple minutes challenge calculation if required)
-- Super slim browser library (< 4kB unzipped, <2 kB zipped)
+- Super slim browser library (~2kB unzipped, ~1.3 kB zipped)
 - No external dependencies, neither in the browser nor on the server
 - No tracking, no ads, just open-source
 - Self hosted
@@ -46,7 +46,8 @@ Or download a release and use the required distribution file
 
 ```php
 use BrainFooLong\Powcaptcha\Powcaptcha;
-Powcaptcha::$tmpFolder = 'path-to-a-local-new-empty-temporary-directory';
+Powcaptcha::$verifiedSolutionsFolder = 'path-to-a-local-new-empty-temporary-directory';
+Powcaptcha::$challengeSalt = 'yourrandomsecretsalt';
 $puzzles = 50;
 $difficulty = 4;
 $challenge = Powcaptcha::createChallenge($puzzles); // send this to client
@@ -62,7 +63,8 @@ if ($verification){
 ```javascript
 import Powcaptcha from 'powcaptcha'
 // or const Powcaptcha = require('powcaptcha')
-Powcaptcha.tmpFolder = 'path-to-a-local-new-empty-temporary-directory';
+Powcaptcha.verifiedSolutionsFolder = 'path-to-a-local-new-empty-temporary-directory';
+Powcaptcha.challengeSalt = 'yourrandomsecretsalt';
 const puzzles = 50
 const difficulty = 4
 const challenge = Powcaptcha.createChallenge(puzzles); // send this to client
@@ -74,10 +76,10 @@ if (verification) {
 ```
 
 #### Browser
-
+> Browsers are only intended to use as a solver with the "-slim" library. If you need to create challenges in the browser, use the non slim browser library.
 ```html
 
-<script src="powcaptcha-browser.min.js"></script>
+<script src="powcaptcha-browser-slim.min.js"></script>
 <progress max="100" value="0" id="powcaptcha_progress"></progress>
 <input type="hidden" name="powcaptcha_solution" id="powcaptcha_solution">
 <script>
@@ -85,7 +87,7 @@ if (verification) {
         const p = document.getElementById('powcaptcha_progress')
         const s = document.getElementById('powcaptcha_solution')
         const difficulty = 4
-        const challenge = 'must come from backend' // to test, const challenge = Powcaptcha.createChallenge(50)
+        const challenge = 'must come from backend -> Powcaptcha.createChallenge()'
         const solution = await Powcaptcha.solveChallenge(challenge, difficulty, (progress) => {
             p.value = progress * 100
         })
@@ -111,7 +113,8 @@ import (
 
 func main() {
   pc := powcaptcha.Powcaptcha{
-    TmpFolder: "path-to-a-local-new-empty-temporary-directory",
+    VerifiedSolutionsFolder: "path-to-a-local-new-empty-temporary-directory",
+    ChallengeSalt: "yourrandomsecretsalt",
   }
   puzzles := 50
   difficulty := 4    
@@ -137,20 +140,17 @@ An already verified challenge cannot be verified again, it will be invalid.
 All tests uses 1 challenge with 50 puzzles and a difficulty of 4. Times stated here can vary a lot, depending on the hardware. It's just to have some basic
 numbers to see how it generally performs.
 
-> \*: Browsers have no check if a challenge already has been verified. Browser do not need this checks anyway, as browser is expected to only solve and and
-> submit the solution.
-
 | Device                            | Solve Time | Verify Time |
 |:----------------------------------|:-----------|:------------|
 | PHP 8.4 i9-14900                  | ~260ms     | ~2ms        |
 | Bun i9-14900                      | ~40ms      | ~2ms        |
 | Node i9-14900                     | ~70ms      | ~2ms        |
 | Golang i9-14900                   | ~30ms      | ~2ms        |
-| Google Chrome i9-14900            | ~280ms     | ~2ms *      |
-| Samsung Galaxy A52s Google Chrome | ~800ms     | ~2ms *      |
-| Samsung S22 Google Chrome         | ~720ms     | ~2ms *      |
-| Samsung S22 Samsung Browser       | ~1100ms    | ~2ms *      |
-| Pixel 6 Google Chrome             | ~680ms     | ~2ms *      |
-| Pixel 9 Google Chrome             | ~680ms     | ~2ms *      |
-| iPhone XR Safari                  | ~450ms     | ~2ms *      |
-| iPhone 15 Safari                  | ~220ms     | ~2ms *      |
+| Google Chrome i9-14900            | ~280ms     | -           |
+| Samsung Galaxy A52s Google Chrome | ~800ms     | -           |
+| Samsung S22 Google Chrome         | ~720ms     | -           |
+| Samsung S22 Samsung Browser       | ~1100ms    | -           |
+| Pixel 6 Google Chrome             | ~680ms     | -           |
+| Pixel 9 Google Chrome             | ~680ms     | -           |
+| iPhone XR Safari                  | ~450ms     | -           |
+| iPhone 15 Safari                  | ~220ms     | -           |

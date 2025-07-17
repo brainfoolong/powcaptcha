@@ -35,7 +35,8 @@ func main() {
 
   var currentdir = filepath.Dir(currentfile)
   pc := powcaptcha.Powcaptcha{
-    TmpFolder: filepath.Join(currentdir, "../tmp"),
+    VerifiedSolutionsFolder: filepath.Join(currentdir, "../tmp"),
+    ChallengeSalt:"randomtestsalt",
   }
 
   // Read and decode the JSON file
@@ -51,7 +52,6 @@ func main() {
 
   difficulty := 4
 
-  // Solve and verify fixed challenges
   for _, typeStr := range types {
   
     challengeFile := filepath.Join(currentdir,"../tmp", "cross-challenge", typeStr)

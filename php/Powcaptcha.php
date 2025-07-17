@@ -7,7 +7,8 @@ use Exception;
 class Powcaptcha
 {
 
-    public static string $tmpFolder = '';
+    public static string $verifiedSolutionsFolder = '';
+    public static string $challengeSalt = '';
     private static array $byteMap = [];
 
     /**
@@ -18,29 +19,36 @@ class Powcaptcha
      */
     public static function createChallenge(int $puzzles = 50): string
     {
-        $arr = [];
-        for ($i = 0; $i < $puzzles; $i++) {
-            $arr[] = bin2hex(random_bytes(16));
+        if (!self::$challengeSalt) {
+            throw new Exception('Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients');
         }
-        return implode('', $arr);
+        $challenge = '';
+        for ($i = 0; $i < $puzzles; $i++) {
+            $challenge .= bin2hex(random_bytes(16));
+        }
+        return $challenge . self::hash($challenge . self::$challengeSalt);
     }
 
     /**
      * Verify the given solution
-     * @param string $challengeString
+     * @param string $challengeData
      * @param string $solution
      * @param int $difficulty Must be the same number as with solveChallenge()
      * @return bool
      */
-    public static function verifySolution(string $challengeString, string $solution, int $difficulty = 4): bool
+    public static function verifySolution(string $challengeData, string $solution, int $difficulty = 4): bool
     {
         if (
-            !$challengeString ||
-            strlen($challengeString) < 32 ||
-            (strlen($challengeString) % 32) !== 0
+            !$challengeData ||
+            strlen($challengeData) < 32 ||
+            (strlen($challengeData) % 32) !== 0
         ) {
             throw new Exception('Invalid challenge string');
         }
+        if (!self::$challengeSalt) {
+            throw new Exception('Powcaptcha.challengeSalt required, should be a random value not exposed to solver clients');
+        }
+        $challengeString = substr($challengeData, 0, -32);
         $challenges = strlen($challengeString) / 32;
         $lengthPerSolution = $difficulty + 2;
         $solutionLengthRequired = $challenges * $lengthPerSolution;
@@ -48,9 +56,15 @@ class Powcaptcha
             throw new Exception('Invalid solution');
         }
 
-        // Check if challenge already has been tested
-        $challengeHash = self::hash($challengeString);
-        $hashFile = self::$tmpFolder . '/' . $challengeHash . '.pow';
+        $challengeHashCalculated = self::hash($challengeString . self::$challengeSalt);
+        $challengeHashGiven = substr($challengeData, -32);
+
+        if ($challengeHashCalculated !== $challengeHashGiven) {
+            throw new Exception('Invalid challenge hash');
+        }
+
+        // check if challenge already has been tested
+        $hashFile = self::$verifiedSolutionsFolder . '/' . self::hash($challengeData) . '.pow';
         if (file_exists($hashFile)) {
             return false;
         }
@@ -58,22 +72,22 @@ class Powcaptcha
         $threshold = 10 ** (10 - $difficulty);
         for ($i = 0; $i < $challenges; $i++) {
             $iteration = substr($solution, $i * $lengthPerSolution, $lengthPerSolution);
-            $challenge = substr($challengeString, $i * 32, 32);
+            $challenge = substr($challengeData, $i * 32, 32);
             if (self::hashInt($challenge . $iteration) <= $threshold) {
                 continue;
             }
             return false;
         }
 
-        if (!self::$tmpFolder || !is_dir(self::$tmpFolder)) {
+        if (!self::$verifiedSolutionsFolder || !is_dir(self::$verifiedSolutionsFolder)) {
             throw new Exception('Cannot find tmpFolder for Powcaptcha');
         }
 
         // delete files older than 5 minutes
         $timeThreshold = time() - 300;
-        foreach (scandir(self::$tmpFolder) as $file) {
+        foreach (scandir(self::$verifiedSolutionsFolder) as $file) {
             if (str_ends_with($file, '.pow')) {
-                $path = self::$tmpFolder . '/' . $file;
+                $path = self::$verifiedSolutionsFolder . '/' . $file;
                 if (filemtime($path) < $timeThreshold) {
                     unlink($path);
                 }
@@ -85,27 +99,27 @@ class Powcaptcha
 
     /**
      * Solves this given challenge
-     * @param string $challengeString
+     * @param string $challengeData
      * @param int $difficulty Higher numbers increase difficulty, highest value may need several minutes per puzzle
      * @return string
      */
-    public static function solveChallenge(string $challengeString, int $difficulty = 4): string
+    public static function solveChallenge(string $challengeData, int $difficulty = 4): string
     {
         if ($difficulty < 1 || $difficulty > 7) {
             throw new Exception('Difficulty need to be between 1-7');
         }
         if (
-            !$challengeString ||
-            strlen($challengeString) < 32 ||
-            (strlen($challengeString) % 32) !== 0
+            !$challengeData ||
+            strlen($challengeData) < 32 ||
+            (strlen($challengeData) % 32) !== 0
         ) {
             throw new Exception('Invalid challenge string');
         }
+        $challengeString = substr($challengeData, 0, -32);
         $challenges = strlen($challengeString) / 32;
         $solutions = [];
         $threshold = 10 ** (10 - $difficulty);
         $maxIterations = 10 ** ($difficulty + 2);
-        $c = 0;
         for ($i = 0; $i < $challenges; $i++) {
             $iteration = 10 ** ($difficulty + 1);
             $challenge = substr($challengeString, $i * 32, 32);

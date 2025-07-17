@@ -2,5 +2,5 @@ import Powcaptcha from '../ts/powcaptcha'
 
 (async () => {
   // @ts-ignore
-  require(__dirname + '/tests-server-base-cross.js')(Powcaptcha)
+  require(__dirname + '/tests-js.js')(Powcaptcha, "ts")
 })()

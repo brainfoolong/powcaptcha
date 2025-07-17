@@ -13,7 +13,8 @@ function logTime($msg, &$now): void
 
 $difficulty = 4;
 
-Powcaptcha::$tmpFolder = __DIR__ . '/../tmp';
+Powcaptcha::$verifiedSolutionsFolder = __DIR__ . '/../tmp';
+Powcaptcha::$challengeSalt = 'randomtestsalt';
 $now = microtime(true);
 
 foreach ($types as $type) {

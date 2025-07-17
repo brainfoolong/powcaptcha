@@ -4,6 +4,7 @@ import Powcaptcha from '../ts/powcaptcha'
 
 (async () => {
 
+  Powcaptcha.challengeSalt = 'randomtestsalt'
   // create fixed challenges and solutions
   const challenges = { 'challenges': [] as any, 'solutions': [] as any }
   for (let i = 0; i < 10; i++) {

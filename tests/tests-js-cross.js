@@ -17,15 +17,16 @@ module.exports = async (Powcaptcha) => {
     console.log(msg + ' (Took ' + diff.toFixed(2) + 'ms)')
   }
 
-  Powcaptcha.tmpFolder = __dirname + '/../tmp'
+  Powcaptcha.verifiedSolutionsFolder = __dirname + '/../tmp'
+  Powcaptcha.challengeSalt = 'randomtestsalt'
   let now = getTime()
 
+  const puzzles = 50
   const difficulty = 4
 
-  const enc = new TextEncoder()
   for (const type of types) {
-    const challenge = fs.readFileSync(Powcaptcha.tmpFolder + '/cross-challenge/' + type).toString()
-    const hashFile = Powcaptcha.tmpFolder + '/' + (Powcaptcha.hash(challenge)) + '.pow'
+    const challenge = fs.readFileSync(Powcaptcha.verifiedSolutionsFolder + '/cross-challenge/' + type).toString()
+    const hashFile = Powcaptcha.verifiedSolutionsFolder + '/' + (Powcaptcha.hash(challenge)) + '.pow'
     if (fs.existsSync(hashFile)) {
       fs.unlinkSync(hashFile)
     }
@@ -33,8 +34,8 @@ module.exports = async (Powcaptcha) => {
     const solution = await Powcaptcha.solveChallenge(challenge, difficulty, (progress) => {
       count++
     })
-    if (count !== 50) {
-      throw new Error('Cannot solve challenges with progress callback')
+    if (count !== puzzles) {
+      throw new Error('Cannot solve challenges with ' + puzzles + ' progress callbacks (' + count + ' given)')
     }
     logTime('Challenge from ' + type + ' solved')
     let verification = Powcaptcha.verifySolution(challenge, solution, difficulty)

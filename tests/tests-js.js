@@ -2,8 +2,8 @@ module.exports = async (Powcaptcha, crossChallengePath) => {
   // @ts-ignore
   const fs = require('fs')
 
-  function getTime(){
-    if(typeof performance !== 'undefined'){
+  function getTime () {
+    if (typeof performance !== 'undefined') {
       return performance.now()
     }
     return new Date().getTime()
@@ -16,7 +16,8 @@ module.exports = async (Powcaptcha, crossChallengePath) => {
     console.log(msg + ' (Took ' + diff.toFixed(2) + 'ms)')
   }
 
-  Powcaptcha.tmpFolder = __dirname + '/../tmp'
+  Powcaptcha.verifiedSolutionsFolder = __dirname + '/../tmp'
+  Powcaptcha.challengeSalt = 'randomtestsalt'
   let now = getTime()
 
   // solve and verify fixed challenges
@@ -30,7 +31,7 @@ module.exports = async (Powcaptcha, crossChallengePath) => {
       throw new Error('Solution for fixed challenge ' + i + ' not correct')
     }
   }
-  logTime('Fixed challenges solved and verified')
+  logTime(fixedChallenges.challenges.length + ' fixed challenges correctly solved')
 
   const puzzles = 50
   const difficulty = 4
@@ -42,7 +43,7 @@ module.exports = async (Powcaptcha, crossChallengePath) => {
     count++
   })
   if (count !== puzzles) {
-    throw new Error('Cannot solve challenges with progress callback')
+    throw new Error('Cannot solve challenges with ' + puzzles + ' progress callbacks (' + count + ' given)')
   }
   logTime('Challenge solved')
   let verification = Powcaptcha.verifySolution(challenge, solution, difficulty)
