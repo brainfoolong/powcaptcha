@@ -26,11 +26,11 @@ jobs:
       - name: Run tests
         run: cd tests && bash run-all-tests.sh
 
-      - name: Release
+      - name: Draft release
         uses: softprops/action-gh-release@v2
         with:
           token:  ${{ secrets.TOKEN }}
-          prerelease: true
+          draft: true
           files: |
             js/powcaptcha.js
             js/powcaptcha.min.js
