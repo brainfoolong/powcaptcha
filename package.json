@@ -16,6 +16,7 @@
   },
   "homepage": "https://github.com/brainfoolong/powcaptcha",
   "devDependencies": {
+    "@types/node": "^24.0.14",
     "typescript": "^5.8.3",
     "uglify-js": "^3.19.3"
   }
