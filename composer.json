@@ -1,0 +1,46 @@
+{
+  "name": "brainfoolong/powcaptcha",
+  "type": "library",
+  "description": "Proof of Work Captcha/Challenge/Brute Force protection for your browser and server, without any required user interaction.",
+  "keywords": [
+    "captcha",
+    "proofofwork",
+    "friendly",
+    "browser",
+    "server"
+  ],
+  "homepage": "https://github.com/brainfoolong/powcaptcha",
+  "license": "MIT",
+  "authors": [
+    {
+      "name": "Roland Eigelsreiter",
+      "homepage": "https://github.com/brainfoolong/powcaptcha",
+      "role": "Developer"
+    }
+  ],
+  "autoload": {
+    "psr-4": {
+      "BrainFooLong\\Powcaptcha\\": "php"
+    }
+  },
+  "archive": {
+    "exclude": [
+      "/build",
+      "/go",
+      "/media",
+      "/tests",
+      "/tmp",
+      ".gitignore",
+      ".gitattributes",
+      ".npmignore",
+      "package.json",
+      "playwright.config.ts",
+      "tsconfig.json"
+    ]
+  },
+  "version": "0.1.0",
+  "require": {
+    "php": ">=8.0.0",
+    "ext-json": "*"
+  }
+}

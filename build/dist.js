@@ -7,6 +7,7 @@ const minimi = function (code) {
 }
 
 const packageJson = JSON.parse(fs.readFileSync(__dirname + '/../package.json').toString())
+const composerFile = __dirname + '/../composer.json'
 const serverFile = __dirname + '/../js/powcaptcha.js'
 const serverFileModule = __dirname + '/../js/powcaptcha-module.js'
 const browserFile = __dirname + '/../js/powcaptcha-browser.js'
@@ -34,3 +35,7 @@ fs.writeFileSync(browserFile.replace('.js', '.min.js'), minimi(contentsBrowser))
 let contentsBrowserSlim = contentsBrowser.replaceAll(/\s*\/\/\s*browserslim-strip-start.*?\/\/\s*browserslim-strip-end */gis, '')
 fs.writeFileSync(browserSlimFile, contentsBrowserSlim)
 fs.writeFileSync(browserSlimFile.replace('.js', '.min.js'), minimi(contentsBrowserSlim))
+
+const composerData = JSON.parse(fs.readFileSync(composerFile).toString())
+composerData.version = packageJson.version
+fs.writeFileSync(composerFile, JSON.stringify(composerData, null, 2))
