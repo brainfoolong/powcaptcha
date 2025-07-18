@@ -37,8 +37,8 @@ protection). But we still use the word captcha as almost everyone is used to it.
 
 ```
 PHP: composer require brainfoolong/powcaptcha
-NPM: npm install powcaptcha
-BUN: bun install powcaptcha
+NPM: npm install @brainfoolong/powcaptcha
+BUN: bun install @brainfoolong/powcaptcha
 Or download a release and use the required distribution file
 ```
 
