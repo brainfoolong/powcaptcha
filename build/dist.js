@@ -12,6 +12,7 @@ const serverFile = __dirname + '/../js/powcaptcha.js'
 const serverFileModule = __dirname + '/../js/powcaptcha-module.js'
 const browserFile = __dirname + '/../js/powcaptcha-browser.js'
 const browserSlimFile = __dirname + '/../js/powcaptcha-browser-slim.js'
+const docsScriptFile = __dirname + '/../docs/scripts/powcaptcha-browser.min.js'
 let contents = fs.readFileSync(serverFile).toString().replace('export default class Powcaptcha', 'class Powcaptcha')
 contents = '// Powcaptcha v' + packageJson.version + ' @ ' + packageJson.homepage + '\n' + contents
 contents += `
@@ -31,6 +32,7 @@ fs.writeFileSync(serverFileModule.replace('.js', '.min.js'), minimi(contentsModu
 let contentsBrowser = contents.replaceAll(/\s*\/\/\s*browser-strip-start.*?\/\/\s*browser-strip-end */gis, '')
 fs.writeFileSync(browserFile, contentsBrowser)
 fs.writeFileSync(browserFile.replace('.js', '.min.js'), minimi(contentsBrowser))
+fs.writeFileSync(docsScriptFile, minimi(contentsBrowser))
 
 let contentsBrowserSlim = contentsBrowser.replaceAll(/\s*\/\/\s*browserslim-strip-start.*?\/\/\s*browserslim-strip-end */gis, '')
 fs.writeFileSync(browserSlimFile, contentsBrowserSlim)

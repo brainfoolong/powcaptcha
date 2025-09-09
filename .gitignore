@@ -5,3 +5,5 @@ bun.lock
 package-lock.json
 test-results
 playwright-report
+vendor
+composer.lock

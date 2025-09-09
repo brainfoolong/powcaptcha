@@ -1,4 +1,4 @@
-![Logo](media/logo.svg)
+![Logo](docs/img/logo.svg)
 
 [![Powcaptcha Tests](https://github.com/brainfoolong/powcaptcha/actions/workflows/tests.yml/badge.svg)](https://github.com/brainfoolong/powcaptcha/actions/workflows/tests.yml)
 
@@ -41,6 +41,10 @@ NPM: npm install @brainfoolong/powcaptcha
 BUN: bun install @brainfoolong/powcaptcha
 Or download a release and use the required distribution file
 ```
+
+### Live example
+
+https://brainfoolong.github.io/powcaptcha/
 
 ### Usage
 

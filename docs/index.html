@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <title>Powcaptcha - Proof Of Work Captcha/Challenge/Brute Force protection</title>
+    <script src="scripts/powcaptcha-browser.min.js"></script>
+    <style>
+      :root {
+        --accent: rgb(255, 0, 33);
+      }
+      body {
+        font-family: Arial, sans-serif;
+        background: #170d10;
+        color: white;
+        font-size: 16px;
+        line-height: 1.6;
+        text-align: center;
+        padding: 20px;
+        box-sizing: border-box;
+      }
+      a, a:any-link {
+        color: var(--accent);
+      }
+      button {
+        background: var(--accent);
+        opacity: 0.9;
+        color: white;
+        font-weight: bold;
+        border: 0;
+        padding: 10px;
+        border-radius: 5px;
+        cursor: pointer;
+        transition: .2s;
+      }
+      button:hover {
+        opacity: 1;
+      }
+      .tabs {
+        display: flex;
+        gap: 10px;
+        margin: 10px 0;
+      }
+      .tabs button {
+        flex: 1 1 auto;
+      }
+      .hidden {
+        display: none !important;
+      }
+      .card {
+        background: rgba(255, 255, 255, 0.1);
+        border-radius: 10px;
+        padding: 10px;
+        margin-bottom: 10px;
+      }
+      .page {
+        max-width: 600px;
+        padding: 20px;
+        margin: 0 auto;
+      }
+      h2 {
+        font-weight: bold;
+        --shadow-color: #ddd;
+        --shadow-blur: 0;
+        --shadow-size: 1px;
+        --shadow-size-invert: calc(var(--shadow-size) * -1);
+        font-size: 2rem;
+        text-shadow: var(--shadow-color) var(--shadow-size) var(--shadow-size) var(--shadow-blur),
+        var(--shadow-color) var(--shadow-size-invert) var(--shadow-size-invert) var(--shadow-blur),
+        var(--shadow-color) var(--shadow-size) var(--shadow-size-invert) var(--shadow-blur),
+        var(--shadow-color) var(--shadow-size-invert) var(--shadow-size) var(--shadow-blur),
+        var(--shadow-color) var(--shadow-size) 0 var(--shadow-blur),
+        var(--shadow-color) var(--shadow-size-invert) 0 var(--shadow-blur),
+        var(--shadow-color) 0 var(--shadow-size) var(--shadow-blur),
+        var(--shadow-color) 0 var(--shadow-size-invert) var(--shadow-blur);
+        color: var(--accent);
+      }
+      h2 span {
+        color: #444;
+      }
+      .examples {
+        flex-wrap: wrap;
+      }
+      .examples .card {
+        flex: 1 0 33%;
+        min-width: 200px;
+        background: rgba(255, 255, 255, 0.05);
+      }
+      .example .progress {
+        margin: 10px;
+      }
+      .example h2 {
+        margin: 0;
+      }
+      .example .execute {
+        margin: 2px 0;
+        display: flex;
+        justify-content: center;
+        text-align: center;
+      }
+      .example .execute button {
+        flex: 1 1 auto;
+        display: block;
+        background: #555;
+      }
+      .example .execute button span {
+        display: block;
+        font-size: 0.8em;
+        font-weight: normal;
+      }
+      input, textarea, select {
+        background: #444;
+        color: white;
+        font-family: Arial, sans-serif;
+        font-size: 16px;
+        line-height: 1.6;
+        border: none;
+        border-radius: 10px;
+        padding: 5px;
+      }
+      .example .verification-result {
+        margin-top: 10px;
+      }
+      .example .code {
+        font-size: 11px;
+        line-height: 1.4;
+        white-space: pre;
+        padding: 10px;
+        text-align: left;
+        overflow: auto;
+        max-width: 100%;
+        font-family: monospace;
+      }
+    </style>
+    <script>
+
+    </script>
+</head>
+<body>
+<div class="page">
+    <a href="https://github.com/brainfoolong/powcaptcha" target="_blank">
+        <img src="img/logo.svg" width="400" alt="Powcaptcha Logo" style="max-width: 100%"><br/><br/>
+        Download and more on Github
+    </a>
+    <br/><br/>
+    <p class="card">
+        Powcaptcha - Proof Of Work Captcha/Challenge/Brute Force protection, without any required user interaction. As of todays technology and
+        capability of AI that can solve any "I am human" captcha faster than any human on earth, protecting backends is now different from what we are all used
+        to
+        from
+        the past.
+    </p>
+    <h2>
+        <span>Example</span> Settings
+    </h2>
+    <div class="settings">
+        <label>Puzzles (100 max.): <input type="number" name="puzzles" value="50" min="1" max="100" size="4" maxlength="4"></label>
+        <label>Difficulty (Between 1-7): <input type="number" name="difficulty" value="4" min="1" max="7" size="2" maxlength="1"></label>
+    </div>
+    <br/><br/>
+    <div class="examples">
+        <div class="card example">
+            <div class="description">Simple html native <span>progress bar</span></div>
+            <div class="progress">
+                <progress value="0" max="100" style="height: 40px; width: 100%"></progress>
+                <div class="status"></div>
+                <input type="hidden" name="challenge">
+                <input type="hidden" name="solution">
+            </div>
+            <script>
+              async function solve (container) {
+                const progressBar = container.querySelector('progress')
+                const status = container.querySelector('.status')
+                const inputChallenge = container.querySelector('input[name=\'challenge\']')
+                const inputSolution = container.querySelector('input[name=\'solution\']')
+                const challenge = await fetchNewChallengeFromBackend()
+                status.innerText = '0%'
+                const solution = await Powcaptcha.solveChallenge(challenge, (progress) => {
+                  progressBar.setAttribute('value', progress * 100)
+                  status.innerText = (progress * 100).toFixed(0) + '%'
+                })
+                status.innerText = 'Finished'
+                // setting both challenge and solution in a hidden field to submit to backend
+                inputChallenge.value = challenge
+                inputSolution.value = solution
+              }
+            </script>
+        </div>
+        <div class="card example">
+            <div class="description">More fancy SVG animation <span>progress</span></div>
+            <div class="progress" style="text-align: center">
+                <!-- Stolen from https://codepen.io/panphora/pen/QWaRqjW -->
+                <div class="progress-elem" style="max-width: 130px; display: inline-block">
+                    <svg style="transform: rotate(90deg); overflow: visible;" height="100%" viewBox="0 0 110 110" width="100%">
+                        <!-- gray dashed -->
+                        <circle cx="50%" cy="50%" fill="none" stroke-width="20" r="40" stroke="#D4D4D8" stroke-dasharray="1.4137,1.4137"></circle>
+                        <!-- green solid -->
+                        <circle class="progress-bar" cx="50%" cy="50%" fill="none" stroke-width="20" r="40" stroke="#19C558"
+                                style="stroke-dashoffset: 251.3274; stroke-dasharray: 251.3274;"></circle>
+                        <!-- inner black stroke -->
+                        <circle cx="50%" cy="50%" fill="none" stroke-width="1.5" r="27.5" stroke="#27272A"></circle>
+                        <!-- outer black stroke -->
+                        <circle cx="50%" cy="50%" fill="none" stroke-width="1.5" r="52.5" stroke="#27272A"></circle>
+                        <g class="success" style="display:none;">
+                            <!-- inner solid green success -->
+                            <circle cx="50%" cy="50%" fill="#19C558" r="50"></circle>
+                            <!-- checkmark line -->
+                            <polyline points="52 74, 65 60, 40 36" stroke="#fff" fill="none" stroke-width="10"/>
+                        </g>
+                    </svg>
+                    <div class="progress-text-container">
+                        <div class="progress-text">
+                            <span class="progress-text-inner">0</span><span class="progress-text-percent">%</span>
+                        </div>
+                    </div>
+                    <style>
+                      .progress-elem {
+                        position: relative;
+                      }
+
+                      .progress-text-container {
+                        position: absolute;
+                        top: 0;
+                        left: 0;
+                        width: 100%;
+                        height: 100%;
+                        display: flex;
+                        align-items: center;
+                        justify-content: center;
+                      }
+
+                      .progress-text {
+                        position: relative;
+                        top: -3px;
+                        right: -2px;
+                      }
+                    </style>
+                </div>
+                <input type="hidden" name="challenge">
+                <input type="hidden" name="solution">
+            </div>
+            <script>
+              async function solve (container) {
+
+                function setSvgState (progress) {
+                  if (!progress) {
+                    progressTextContainer.style.display = ''
+                    success.style.display = 'none'
+                  }
+                  let state = parseInt(progress * 100)
+                  if (state === 100) {
+                    initial = 0
+                    progressBar.style.strokeDashoffset = initial
+                    setTimeout(() => {
+                      progressTextContainer.style.display = 'none'
+                      success.style.display = ''
+                    }, 100)
+                  } else {
+                    progressBar.style.strokeDashoffset = initial - (increment * state)
+                    if (state !== 100) {
+                      progressTextInner.innerHTML = state
+                    }
+                  }
+                }
+
+                let initial = 251.3274
+                let increment = 251.3274 / 100
+                let progressBar = container.querySelector('.progress-bar')
+                let success = container.querySelector('.success')
+                let progressTextContainer = container.querySelector('.progress-text-container')
+                let progressTextInner = container.querySelector('.progress-text-inner')
+
+                const inputChallenge = container.querySelector('input[name=\'challenge\']')
+                const inputSolution = container.querySelector('input[name=\'solution\']')
+                const challenge = await fetchNewChallengeFromBackend()
+                setSvgState(0)
+                const solution = await Powcaptcha.solveChallenge(challenge, (progress) => {
+                  setSvgState(progress)
+                })
+                setSvgState(1)
+                // setting both challenge and solution in a hidden field to submit to backend
+                inputChallenge.value = challenge
+                inputSolution.value = solution
+              }
+            </script>
+        </div>
+    </div>
+</div>
+<script>
+  // implement your own logic to fetch challenges from backend, you never to this in frontend or on the client
+  async function fetchNewChallengeFromBackend () {
+    const settings = getSettings()
+    Powcaptcha.challengeSalt = window.crypto.randomUUID()
+    return Powcaptcha.createChallenge(settings.puzzles, settings.difficulty)
+  }
+
+  function getSettings () {
+    const container = document.querySelector('.settings')
+    return {
+      puzzles: parseInt(container.querySelector('input[name=\'puzzles\']').value),
+      difficulty: parseInt(container.querySelector('input[name=\'difficulty\']').value),
+    }
+  }
+
+  ;(() => {
+    let verifiedChallenges = {}
+    const exampleContainers = document.querySelectorAll('.example')
+    for (const exampleContainer of exampleContainers) {
+      const descriptionHtml = exampleContainer.querySelector('.description').innerHTML
+      let progressHtml = exampleContainer.querySelector('.progress').innerHTML.trim()
+      let script = exampleContainer.querySelector('script').innerHTML.trim().replace(/async function solve.*?\{(.*)\}/s, '$1').trim()
+      let trimLength = script.match(/^(\s+)/m)[1].length
+      script = script.replace(new RegExp('^(\\s){' + (trimLength - 4) + '}', 'mg'), '')
+
+      trimLength = progressHtml.match(/^(\s+)/m)[1].length
+      progressHtml = progressHtml.replace(new RegExp('^(\\s){' + (trimLength - 4) + '}', 'mg'), '')
+
+      exampleContainer.innerHTML = `
+        <h2 class="description">${descriptionHtml}</h2>
+        <div class="progress">${progressHtml}</div>
+        <div class="execute" data-id="solve"><button style="background: var(--accent)">Solve<span>Client fetches a new challenge from backend and solves the puzzle</span><span>In production you maybe do this automatically when user focuses the form first time</span></button></div>
+        <div class="execute" data-id="verify"><button style="background: #2c8a6e">Verify Solution<span>In production backend verifies the solution if it is valid</span></button></div>
+        <div class="execute" data-id="code"><button style="background: #2e3331">Show client code</button></div>
+        <div class="verification-result"></div>
+        <div class="code"></div>
+      `
+      const results = exampleContainer.querySelector('.verification-result')
+      const code = exampleContainer.querySelector('.code')
+      exampleContainer.querySelector('.execute[data-id=\'solve\']').addEventListener('click', () => {
+        exampleContainer.setAttribute('data-state', 'running')
+        results.innerHTML = ''
+        let scriptTag = document.createElement('script')
+        window.testContainer = exampleContainer
+        scriptTag.innerHTML = `
+            (async ()=>{
+                async function solve (container) {
+                    ${script}
+                }
+                try{
+                    await solve(window.testContainer)
+                }catch(e){console.error(e)}
+                window.testContainer.setAttribute('data-state', 'ready')
+            })()
+        `
+        document.querySelector('head').append(scriptTag)
+      })
+      exampleContainer.querySelector('.execute[data-id=\'verify\']').addEventListener('click', () => {
+        const challengeData = exampleContainer.querySelector('.progress input[name=\'challenge\']').value
+        const solution = exampleContainer.querySelector('.progress input[name=\'solution\']').value
+        if (!solution || !challengeData) {
+          results.innerHTML = '<div style="color:red">Missing Solution - Solve first</div>'
+          return
+        }
+        if (verifiedChallenges[challengeData]) {
+          results.innerHTML = '<div style="color:red">Challenge already verified - You need to solve with a new challenge again</div>'
+          return
+        }
+        verifiedChallenges[challengeData] = true
+        const verified = Powcaptcha.verifySolution(challengeData, solution)
+        if (!verified) {
+          results.innerHTML = '<div style="color:red">Solution invalid - Cannot be verified</div>'
+          return
+        }
+        results.innerHTML = '<div style="color:darkseagreen">Solution verified and valid</div>'
+      })
+      exampleContainer.querySelector('.execute[data-id=\'code\']').addEventListener('click', () => {
+        code.innerText = `<div class="container">\n    ${progressHtml}\n</div>\n\n<script>\n    ${script}` + '\n</' + 'script>'
+      })
+    }
+  })()
+</script>
+</body>
+</html>
